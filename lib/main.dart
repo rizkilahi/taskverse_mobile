@@ -1,0 +1,19 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/navigation_provider.dart';
+import 'features/home/providers/home_provider.dart';
+import 'features/taskroom/providers/task_provider.dart';
+import 'app.dart';
+
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ChangeNotifierProvider(create: (_) => HomeProvider()),
+        ChangeNotifierProvider(create: (_) => TaskProvider()),
+      ],
+      child: const TaskVerseApp(),
+    ),
+  );
+}
