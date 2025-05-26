@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../shared/navigation/bottom_nav_bar.dart';
 import '../../../data/models/user_model.dart';
 import '../widgets/calendar_widget.dart';
 import '../widgets/project_list_widget.dart';
 import '../widgets/reminder_widget.dart';
 import '../../../core/utils/responsive_utils.dart';
+import '../providers/home_provider.dart';
+import '../../taskroom/providers/task_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -18,6 +21,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Pastikan TaskProvider diakses di home page
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    final homeProvider = Provider.of<HomeProvider>(context, listen: false);
+    
+    // Set task provider ke home provider jika belum
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      homeProvider.setTaskProvider(taskProvider);
+    });
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
