@@ -176,4 +176,8 @@ class TaskProvider with ChangeNotifier {
     });
   }
 
+  // Tambahan method baru
+  List<TaskModel> getTasksByProjectId(String projectId) {
+    return _tasks.where((task) => task.projectId == projectId).toList();
+  }
 }

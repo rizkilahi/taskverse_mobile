@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../config/themes/app_colors.dart';
-import '../../../data/models/thread_model.dart';
 import '../../../data/models/thread_member_model.dart';
 import '../../../data/models/message_model.dart';
 import '../providers/thread_provider.dart';

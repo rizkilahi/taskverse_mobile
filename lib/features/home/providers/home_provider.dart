@@ -4,7 +4,7 @@ import '../../../data/models/task_model.dart';
 import '../../taskroom/providers/task_provider.dart';
 
 class HomeProvider with ChangeNotifier {
-  List<ProjectModel> _projects = ProjectModel.dummyProjects;
+  final List<ProjectModel> _projects = ProjectModel.dummyProjects;
   DateTime _selectedDate = DateTime.now();
   
   // Referensi ke TaskProvider untuk mendapatkan data tasks

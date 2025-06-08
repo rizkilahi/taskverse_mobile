@@ -15,10 +15,20 @@ import 'features/thread/providers/thread_provider.dart';
 import 'features/taskroom/screens/create_task_screen.dart';
 import 'features/taskroom/screens/personal_task_screen.dart';
 import 'features/taskroom/screens/create_project_screen.dart'; // NEW
+import 'features/taskroom/screens/project_detail_screen.dart';
+import 'features/taskroom/screens/create_task_in_project_screen.dart'; // NEW
+import 'features/taskroom/screens/edit_task_in_project_screen.dart';
+import 'features/taskroom/providers/project_task_provider.dart';
+import 'features/taskroom/screens/project_settings_screen.dart';
+import 'features/auth/screens/splash_screen.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/register_screen.dart';
+import 'features/profile/screens/notifications_screen.dart';
+import 'features/profile/screens/settings_screen.dart';
 import 'config/app_scroll_behavior.dart';
-
+import 'features/auth/providers/auth_provider.dart';
 class TaskVerseApp extends StatefulWidget {
-  const TaskVerseApp({Key? key}) : super(key: key);
+  const TaskVerseApp({super.key});
 
   @override
   State<TaskVerseApp> createState() => _TaskVerseAppState();
@@ -31,11 +41,18 @@ class _TaskVerseAppState extends State<TaskVerseApp> {
     // Jadwalkan cek daily reset untuk daily tasks
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Perlu runlater karena provider belum tersedia di initState
-      Future.microtask(() {
+      Future.microtask(() async{
         final taskProvider = Provider.of<TaskProvider>(context, listen: false);
         final projectProvider = Provider.of<ProjectProvider>(context, listen: false); // NEW
         final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
-        
+        final projectTaskProvider = Provider.of<ProjectTaskProvider>(context, listen: false);
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+        // Cek auth status
+        final isLoggedIn = await authProvider.checkAuthStatus();
+        if (isLoggedIn && mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
         // Initialize task provider
         taskProvider.checkDailyReset();
         taskProvider.scheduleMidnightCleanup();
@@ -43,40 +60,54 @@ class _TaskVerseAppState extends State<TaskVerseApp> {
         // Initialize project provider  // NEW
         projectProvider.setThreadProvider(threadProvider); // NEW
         projectProvider.fetchProjects(); // NEW
-        
+        projectTaskProvider.setProjectProvider(projectProvider);
+      
         // Initialize thread provider
         threadProvider.fetchThreads();
       });
     });
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => NavigationProvider()),
-        ChangeNotifierProvider(create: (_) => HomeProvider()),
-        ChangeNotifierProvider(create: (_) => TaskProvider()),
-        ChangeNotifierProvider(create: (_) => ProjectProvider()), // NEW
-        ChangeNotifierProvider(create: (_) => ThreadProvider()),
-      ],
-      child: MaterialApp(
-        title: 'TaskVerse',
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        scrollBehavior: AppScrollBehavior(),
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const HomeScreen(),
-          '/home': (context) => const HomeScreen(),
-          '/taskroom': (context) => const TaskRoomScreen(),
-          '/thread': (context) => const ThreadScreen(),
-          '/profile': (context) => const ProfileScreen(),
-          '/personal-task': (context) => const PersonalTaskScreen(),
-          '/create-task': (context) => const CreateTaskScreen(),
-          '/create-project': (context) => const CreateProjectScreen(), // NEW
-        },
-      ),
+    return MaterialApp(
+      title: 'TaskVerse',
+      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
+      scrollBehavior: AppScrollBehavior(),
+      initialRoute: '/splash',
+      routes: {
+        '/splash': (context) => const SplashScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/': (context) => const HomeScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/taskroom': (context) => const TaskRoomScreen(),
+        '/thread': (context) => const ThreadScreen(),
+        '/profile': (context) => const ProfileScreen(),
+        '/personal-task': (context) => const PersonalTaskScreen(),
+        '/create-task': (context) => const CreateTaskScreen(),
+        '/create-project': (context) => const CreateProjectScreen(),
+        '/create-task-in-project': (context) => const CreateTaskInProjectScreen(), // NEW
+        '/edit-task-in-project': (context) => const EditTaskInProjectScreen(),
+        '/settings': (context) => const SettingsScreen(),
+        '/notifications': (context) => const NotificationsScreen(), // NEW
+        '/project-settings': (context) => ProjectSettingsScreen(
+    projectId: ModalRoute.of(context)!.settings.arguments as String),
+      },
+      onGenerateRoute: (settings) {
+        // CRITICAL: Handle dynamic routes with parameters
+        if (settings.name?.startsWith('/project-detail') == true) {
+          final projectId = settings.arguments as String?;
+          if (projectId != null) {
+            return MaterialPageRoute(
+              builder: (context) => ProjectDetailScreen(projectId: projectId),
+              settings: settings,
+            );
+          }
+        }
+        return null;
+      },
     );
   }
 }

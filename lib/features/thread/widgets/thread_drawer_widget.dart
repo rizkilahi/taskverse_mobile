@@ -7,7 +7,7 @@ import 'thread_dialogs.dart';
 class ThreadDrawerWidget extends StatefulWidget {
   final ThreadProvider provider;
   
-  const ThreadDrawerWidget({Key? key, required this.provider}) : super(key: key);
+  const ThreadDrawerWidget({super.key, required this.provider});
 
   @override
   State<ThreadDrawerWidget> createState() => _ThreadDrawerWidgetState();
@@ -156,7 +156,7 @@ class _ThreadDrawerWidgetState extends State<ThreadDrawerWidget> {
                               Navigator.pop(context);
                             },
                           );
-                        }).toList(),
+                        }),
                         
                         // Quick add sub-thread button
                         ListTile(
@@ -180,7 +180,7 @@ class _ThreadDrawerWidgetState extends State<ThreadDrawerWidget> {
                       ],
                     );
                   }
-                }).toList(),
+                }),
                 
                 // PROJECT-THREADS Section
                 const Divider(),
@@ -240,7 +240,7 @@ class _ThreadDrawerWidgetState extends State<ThreadDrawerWidget> {
                               Navigator.pop(context);
                             },
                           );
-                        }).toList(),
+                        }),
                         
                         // Quick add sub-thread button
                         ListTile(
@@ -263,7 +263,7 @@ class _ThreadDrawerWidgetState extends State<ThreadDrawerWidget> {
                       ],
                     );
                   }
-                }).toList(),
+                }),
               ],
             ),
           ),

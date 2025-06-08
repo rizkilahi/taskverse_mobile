@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.0
+  sdk: ">=3.7.0 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -30,24 +30,26 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   
-  # State management
+  # State managements
   provider: ^6.0.5
   
   # Date formatting
-  intl: ^0.18.0
+  intl: ^0.20.2
   
   # Local storage
   shared_preferences: ^2.0.15
   
   # Image and file picking for thread functionality
   image_picker: ^1.0.4
-  file_picker: ^6.1.1
-  
+  file_picker: ^10.1.9
+  http: ^1.2.1 # Ditambahkan buat API calls
   # HTTP requests for backend integration (optional, bisa ditambah nanti)
   # http: ^1.1.0
 
@@ -62,6 +64,11 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+  # Flutter launcher icons untuk menyesuaikan ikon aplikasi
+  flutter_launcher_icons: ^0.9.2
+
+  # Flutter native splash screen
+  flutter_native_splash: ^2.0.0
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -87,3 +94,18 @@ flutter:
           weight: 600
         - asset: assets/fonts/Montserrat-Bold.ttf
           weight: 700
+      
+  # # Konfigurasi splash screen
+  # flutter_native_splash:
+  #   color: "#ffffff"  # Ubah warna splash screen sesuai kebutuhan
+  #   image: assets/images/splash_screen.png  # Ubah dengan gambar splash screen
+
+  # # Konfigurasi ikon aplikasi
+  # flutter_icons:
+  #   android: true
+  #   ios: true
+  #   image_path: "assets/icons/app_icon.png"  # Ubah dengan path gambar ikon aplikasi Anda
+
+dependency_overrides:
+  intl: ^0.20.2
+#   some_package: ^2.0.0

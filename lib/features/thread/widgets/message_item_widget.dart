@@ -12,13 +12,13 @@ class MessageItemWidget extends StatelessWidget {
   final String? searchQuery; // ADDED: For search highlighting
 
   const MessageItemWidget({
-    Key? key,
+    super.key,
     required this.message,
     required this.isCurrentUser,
     required this.showSenderInfo,
     required this.threadProvider,
     this.searchQuery,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +94,7 @@ class MessageItemWidget extends StatelessWidget {
                         // Attachments (images/files) - FIXED: Better display
                         if (message.attachments?.isNotEmpty ?? false)
                           ...message.attachments!.map((attachment) => 
-                              _buildAttachment(context, attachment)).toList(),
+                              _buildAttachment(context, attachment)),
                         
                         // Text content - FIXED: Search highlighting
                         if (message.content.isNotEmpty)

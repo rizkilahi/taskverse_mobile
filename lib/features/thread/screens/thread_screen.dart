@@ -16,14 +16,14 @@ import '../../../data/models/thread_member_model.dart';
 import '../../../data/models/message_model.dart';
 
 class ThreadScreen extends StatefulWidget {
-  const ThreadScreen({Key? key}) : super(key: key);
+  const ThreadScreen({super.key});
 
   @override
   State<ThreadScreen> createState() => _ThreadScreenState();
 }
 
 class _ThreadScreenState extends State<ThreadScreen> {
-  int _currentIndex = 2; // Thread selected
+  final int _currentIndex = 2; // Thread selected
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
@@ -31,10 +31,20 @@ class _ThreadScreenState extends State<ThreadScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch threads dari server saat screen dibuka
+    // Fetch threads dan select thread berdasarkan arguments
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
+      final threadId = ModalRoute.of(context)?.settings.arguments as String? ?? 'hq-1-1';
+      threadProvider.selectThread(threadId);
       threadProvider.fetchThreads();
+      _scrollToBottom();
+    });
+
+    // Tambah listener untuk scroll ke bawah setiap ada pesan baru
+    Provider.of<ThreadProvider>(context, listen: false).addListener(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
     });
   }
   
@@ -201,7 +211,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                                   isCurrentUser: isCurrentUser,
                                   showSenderInfo: showSenderInfo,
                                   threadProvider: threadProvider,
-                                  searchQuery: threadProvider.searchQuery, // Pass search query for highlighting
+                                  searchQuery: threadProvider.searchQuery,
                                 );
                               },
                             ),
@@ -299,7 +309,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              // Clear search
               context.read<ThreadProvider>().clearSearch();
             },
             child: const Text('Clear Search'),
@@ -412,7 +421,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 try {
                   final image = await _imagePicker.pickImage(
                     source: ImageSource.camera,
-                    imageQuality: 70, // Compress untuk mobile
+                    imageQuality: 70,
                   );
                   if (image != null) {
                     await threadProvider.sendImageMessage(
@@ -437,7 +446,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 try {
                   final image = await _imagePicker.pickImage(
                     source: ImageSource.gallery,
-                    imageQuality: 70, // Compress untuk mobile
+                    imageQuality: 70,
                   );
                   if (image != null) {
                     await threadProvider.sendImageMessage(
@@ -464,13 +473,13 @@ class _ThreadScreenState extends State<ThreadScreen> {
       final result = await picker.FilePicker.platform.pickFiles(
         type: picker.FileType.any,
         allowMultiple: false,
-        withData: false, // Untuk performa yang lebih baik
+        withData: false,
       );
       
       if (result != null && result.files.single.path != null) {
         final file = File(result.files.single.path!);
         
-        // Show confirmation dengan file info
+        // Show confirmation
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(

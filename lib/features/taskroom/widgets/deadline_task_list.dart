@@ -7,7 +7,7 @@ import '../providers/task_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 
 class DeadlineTaskList extends StatelessWidget {
-  const DeadlineTaskList({Key? key}) : super(key: key);
+  const DeadlineTaskList({super.key});
 
   @override
   Widget build(BuildContext context) {

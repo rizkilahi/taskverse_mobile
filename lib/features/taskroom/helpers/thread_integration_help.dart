@@ -1,69 +1,130 @@
-// File: lib/features/taskroom/helpers/thread_integration_helper.dart
-
 import '../../../data/models/project_model.dart';
 import '../../../data/models/thread_model.dart';
 import '../../../data/models/thread_member_model.dart';
-import '../../../data/models/message_model.dart'; // Import MessageType dari sini
+import '../../../data/models/message_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../thread/providers/thread_provider.dart';
 
 class ThreadIntegrationHelper {
   static const String PROJECT_THREAD_PREFIX = '#';
-  
-  /// Create main project thread when project is created
-  static Future<ThreadModel?> createProjectThread({
+  static int _subThreadCounter = 0; // Tambah counter untuk ID unik
+
+  static String _generateUniqueSubThreadId(String parentId) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final counter = ++_subThreadCounter;
+    return '$parentId-sub-$timestamp-$counter';
+  }
+
+  static Future<ThreadModel> createProjectThread({
     required ProjectModel project,
     required ThreadProvider threadProvider,
   }) async {
     try {
-      // Convert project members to thread members
+      print('🔧 ThreadIntegrationHelper: Creating thread for project ${project.name}...');
+      
+      // Reset counter tiap bikin project thread baru
+      _subThreadCounter = 0;
+      
+      // Cek apakah thread dengan projectId ini udah ada
+      final existingThread = threadProvider.threads
+          .firstWhere((thread) => thread.projectId == project.id && thread.parentThreadId == null, 
+          orElse: () => ThreadModel(
+            id: 'temp-${project.id}',
+            name: formatProjectThreadName(project.name),
+            type: ThreadType.project,
+            projectId: project.id,
+            members: [],
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ));
+      if (existingThread.id != 'temp-${project.id}') {
+        print('🔧 ThreadIntegrationHelper: Thread already exists for project ${project.name}: ${existingThread.id}');
+        return existingThread;
+      }
+
       final threadMembers = project.members.map((projectMember) {
         return ThreadMemberModel(
           user: projectMember.user,
           role: _convertProjectRoleToMemberRole(projectMember.role),
-          status: MemberStatus.online, // Default status
+          status: MemberStatus.online,
           lastActive: DateTime.now(),
         );
       }).toList();
 
       final mainThreadName = formatProjectThreadName(project.name);
+      final threadId = 'project-${DateTime.now().millisecondsSinceEpoch}';
       
-      // Create main project thread using ThreadProvider's existing method
-      await threadProvider.createHQThread(
+      print('🔧 ThreadIntegrationHelper: Thread name will be: $mainThreadName');
+      print('🔧 ThreadIntegrationHelper: Thread members: ${threadMembers.map((m) => m.user.name).toList()}');
+      
+      // Buat thread utama
+      final mainThread = ThreadModel(
+        id: threadId,
         name: mainThreadName,
-        description: project.description ?? 'Main project discussion thread',
+        type: ThreadType.project,
+        projectId: project.id,
         members: threadMembers,
-        customSubThreads: ['general', 'tasks', 'updates'], // Default sub-threads
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        description: project.description ?? 'Main project discussion thread for ${project.name}',
       );
-
-      // Find the created thread (ThreadProvider akan membuat dengan ID yang unik)
-      final createdThreads = threadProvider.projectThreads
-          .where((thread) => thread.name == mainThreadName)
-          .toList();
       
-      if (createdThreads.isNotEmpty) {
-        final mainThread = createdThreads.first;
-        
-        // Update thread dengan project ID (jika ThreadProvider mendukung)
-        // Untuk sementara, return thread yang sudah dibuat
-        return mainThread;
+      threadProvider.threads.add(mainThread);
+      // Inisialisasi _threadMessages
+      if (!threadProvider.threadMessages.containsKey(threadId)) {
+        threadProvider.threadMessages[threadId] = [];
       }
 
-      return null;
+      // Buat sub-thread dengan delay dan counter
+      final subThreads = ['general', 'tasks', 'updates'];
+      for (var subThreadName in subThreads) {
+        // Tambah delay biar timestamp beda
+        await Future.delayed(const Duration(milliseconds: 5));
+        
+        final subThreadId = _generateUniqueSubThreadId(threadId);
+        final subThread = ThreadModel(
+          id: subThreadId,
+          name: '#$subThreadName',
+          type: ThreadType.project,
+          parentThreadId: threadId,
+          projectId: project.id,
+          members: threadMembers,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          description: _getDefaultDescription(subThreadName),
+        );
+        threadProvider.threads.add(subThread);
+        // Inisialisasi _threadMessages untuk sub-thread
+        if (!threadProvider.threadMessages.containsKey(subThreadId)) {
+          threadProvider.threadMessages[subThreadId] = [];
+        }
+        print('🔧 ThreadIntegrationHelper: Created sub-thread "#$subThreadName" with ID: $subThreadId');
+      }
+
+      threadProvider.notifyListeners();
+      print('✅ ThreadIntegrationHelper: Project thread created successfully: ${mainThread.name} (${mainThread.id})');
+      
+      return mainThread;
     } catch (e) {
-      print('Error creating project thread: $e');
-      return null;
+      print('❌ ThreadIntegrationHelper: Error creating project thread: $e');
+      return ThreadModel(
+        id: 'temp-${project.id}',
+        name: formatProjectThreadName(project.name),
+        type: ThreadType.project,
+        projectId: project.id,
+        members: project.members.map((m) => convertProjectMemberToThreadMember(m)).toList(),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
     }
   }
 
-  /// Add member to all project threads when added to project
   static Future<void> addMemberToProjectThreads({
     required String projectId,
     required ProjectMember newMember,
     required ThreadProvider threadProvider,
   }) async {
     try {
-      // Get all threads related to this project
       final projectThreads = getProjectThreadsByProjectId(projectId, threadProvider);
       
       final threadMember = ThreadMemberModel(
@@ -73,39 +134,55 @@ class ThreadIntegrationHelper {
         lastActive: DateTime.now(),
       );
 
-      // Add member to all project threads
-      // Note: ThreadProvider belum punya method addMemberToThread,
-      // jadi ini placeholder untuk future implementation
       for (final thread in projectThreads) {
-        // TODO: Implement addMemberToThread di ThreadProvider
-        print('Would add ${newMember.user.name} to thread ${thread.name}');
+        final threadIndex = threadProvider.threads.indexWhere((t) => t.id == thread.id);
+        if (threadIndex != -1) {
+          final updatedMembers = List<ThreadMemberModel>.from(thread.members)
+            ..add(threadMember);
+          
+          threadProvider.threads[threadIndex] = thread.copyWith(
+            members: updatedMembers,
+            updatedAt: DateTime.now(),
+          );
+        }
       }
+      
+      threadProvider.notifyListeners();
+      print('✅ ThreadIntegrationHelper: Added ${newMember.user.name} to ${projectThreads.length} project threads');
     } catch (e) {
-      print('Error adding member to project threads: $e');
+      print('❌ ThreadIntegrationHelper: Error adding member to project threads: $e');
     }
   }
 
-  /// Remove member from all project threads when removed from project
   static Future<void> removeMemberFromProjectThreads({
     required String projectId,
     required String userId,
     required ThreadProvider threadProvider,
   }) async {
     try {
-      // Get all threads related to this project
       final projectThreads = getProjectThreadsByProjectId(projectId, threadProvider);
 
-      // Remove member from all project threads
       for (final thread in projectThreads) {
-        // TODO: Implement removeMemberFromThread di ThreadProvider
-        print('Would remove user $userId from thread ${thread.name}');
+        final threadIndex = threadProvider.threads.indexWhere((t) => t.id == thread.id);
+        if (threadIndex != -1) {
+          final updatedMembers = thread.members
+              .where((member) => member.user.id != userId)
+              .toList();
+          
+          threadProvider.threads[threadIndex] = thread.copyWith(
+            members: updatedMembers,
+            updatedAt: DateTime.now(),
+          );
+        }
       }
+      
+      threadProvider.notifyListeners();
+      print('✅ ThreadIntegrationHelper: Removed user $userId from ${projectThreads.length} project threads');
     } catch (e) {
-      print('Error removing member from project threads: $e');
+      print('❌ ThreadIntegrationHelper: Error removing member from project threads: $e');
     }
   }
 
-  /// Update member role in all project threads when role changes
   static Future<void> updateMemberRoleInProjectThreads({
     required String projectId,
     required String userId,
@@ -113,12 +190,10 @@ class ThreadIntegrationHelper {
     required ThreadProvider threadProvider,
   }) async {
     try {
-      // Get all threads related to this project
       final projectThreads = getProjectThreadsByProjectId(projectId, threadProvider);
       
       final newMemberRole = _convertProjectRoleToMemberRole(newRole);
 
-      // Update member role in all project threads
       for (final thread in projectThreads) {
         await threadProvider.updateMemberRole(
           threadId: thread.id,
@@ -126,75 +201,70 @@ class ThreadIntegrationHelper {
           role: newMemberRole,
         );
       }
+      
+      print('✅ ThreadIntegrationHelper: Updated role for user $userId in ${projectThreads.length} project threads');
     } catch (e) {
-      print('Error updating member role in project threads: $e');
+      print('❌ ThreadIntegrationHelper: Error updating member role in project threads: $e');
     }
   }
 
-  /// Delete all project threads when project is deleted
   static Future<void> deleteProjectThreads({
     required String projectId,
     required ThreadProvider threadProvider,
   }) async {
     try {
-      // Get all threads related to this project
       final projectThreads = getProjectThreadsByProjectId(projectId, threadProvider);
 
-      // Delete all project threads
-      // Note: ThreadProvider belum punya method deleteThread,
-      // jadi ini placeholder untuk future implementation
       for (final thread in projectThreads) {
-        // TODO: Implement deleteThread di ThreadProvider
-        print('Would delete thread ${thread.name} (${thread.id})');
+        threadProvider.threads.removeWhere((t) => t.id == thread.id);
       }
+      
+      threadProvider.notifyListeners();
+      print('✅ ThreadIntegrationHelper: Deleted ${projectThreads.length} project threads');
     } catch (e) {
-      print('Error deleting project threads: $e');
+      print('❌ ThreadIntegrationHelper: Error deleting project threads: $e');
     }
   }
 
-  /// Convert ProjectRole to MemberRole (existing enum)
-  static MemberRole _convertProjectRoleToMemberRole(ProjectRole projectRole) {
-    switch (projectRole) {
-      case ProjectRole.admin:
-        return MemberRole.admin;
-      case ProjectRole.member:
-        return MemberRole.member;
-      case ProjectRole.viewer:
-        return MemberRole.member; // Viewer jadi member biasa di thread
-    }
-  }
-
-  /// Send system message to project thread
   static Future<void> sendProjectSystemMessage({
     required String projectId,
     required String message,
     required ThreadProvider threadProvider,
   }) async {
     try {
-      // Get main project thread
       final mainThread = getMainProjectThread(projectId, threadProvider);
       
       if (mainThread != null) {
-        // Switch to that thread and send message
-        threadProvider.selectThread(mainThread.id);
-        await threadProvider.sendMessage(
+        final systemMessage = MessageModel(
+          id: 'msg-system-${DateTime.now().millisecondsSinceEpoch}',
+          threadId: mainThread.id,
+          sender: UserModel(id: 'system', name: 'System', email: 'system@example.com'),
           content: message,
           type: MessageType.system,
+          createdAt: DateTime.now(),
+          isUnread: true,
         );
+
+        if (!threadProvider.threadMessages.containsKey(mainThread.id)) {
+          threadProvider.threadMessages[mainThread.id] = [];
+        }
+        threadProvider.threadMessages[mainThread.id]!.add(systemMessage);
+        threadProvider.notifyListeners();
+
+        print('✅ ThreadIntegrationHelper: Sent system message to project thread: $message');
+      } else {
+        print('❌ ThreadIntegrationHelper: Main project thread not found for project $projectId');
       }
     } catch (e) {
-      print('Error sending project system message: $e');
+      print('❌ ThreadIntegrationHelper: Error sending project system message: $e');
     }
   }
 
-  /// Get project thread URL for navigation
   static String getProjectThreadRoute(String projectId) {
     return '/thread?project=$projectId';
   }
 
-  /// Get formatted thread name for project
   static String formatProjectThreadName(String projectName) {
-    // Remove special characters and spaces, make lowercase
     final cleanName = projectName
         .toLowerCase()
         .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
@@ -203,7 +273,6 @@ class ThreadIntegrationHelper {
     return '$PROJECT_THREAD_PREFIX$cleanName';
   }
 
-  /// Check if user has permission to perform action in project thread
   static bool hasThreadPermission({
     required ProjectModel project,
     required String userId,
@@ -215,63 +284,48 @@ class ThreadIntegrationHelper {
 
       switch (action) {
         case ThreadAction.read:
-          return true; // All project members can read
+          return true;
         case ThreadAction.write:
-          return userRole != ProjectRole.viewer; // Members and admins can write
+          return userRole != ProjectRole.viewer;
         case ThreadAction.manageMembers:
-          return userRole == ProjectRole.admin; // Only admins can manage
+          return userRole == ProjectRole.admin;
         case ThreadAction.deleteThread:
-          return userRole == ProjectRole.admin; // Only admins can delete
+          return userRole == ProjectRole.admin;
       }
     } catch (e) {
-      return false; // User not found in project
+      return false;
     }
   }
 
-  // Helper methods using existing ThreadProvider functionality
-
-  /// Get threads related to project ID using existing ThreadProvider methods
   static List<ThreadModel> getProjectThreadsByProjectId(String projectId, ThreadProvider threadProvider) {
-    // Since ThreadProvider doesn't have getThreadsByProjectId yet,
-    // we'll filter project threads by matching project ID or thread name pattern
-    return threadProvider.projectThreads.where((thread) {
-      // Check if thread has projectId field (when available)
-      if (thread.projectId == projectId) return true;
-      
-      // For now, we can't reliably identify project threads by projectId
-      // This should be improved when projectId field is properly used
-      return false;
+    return threadProvider.threads.where((thread) {
+      return thread.projectId == projectId;
     }).toList();
   }
 
-  /// Get main project thread using existing ThreadProvider methods
   static ThreadModel? getMainProjectThread(String projectId, ThreadProvider threadProvider) {
     final projectThreads = getProjectThreadsByProjectId(projectId, threadProvider);
     
     if (projectThreads.isEmpty) return null;
     
-    // Return thread that doesn't have parent (main thread)
     try {
       return projectThreads.firstWhere(
         (thread) => thread.parentThreadId == null,
       );
     } catch (e) {
-      // If no main thread found, return first available
       return projectThreads.first;
     }
   }
 
-  /// Convert project member to thread member
   static ThreadMemberModel convertProjectMemberToThreadMember(ProjectMember projectMember) {
     return ThreadMemberModel(
       user: projectMember.user,
       role: _convertProjectRoleToMemberRole(projectMember.role),
-      status: MemberStatus.online, // Default status
+      status: MemberStatus.online,
       lastActive: DateTime.now(),
     );
   }
 
-  /// Send welcome message when project is created
   static Future<void> sendWelcomeMessage({
     required ProjectModel project,
     required ThreadProvider threadProvider,
@@ -283,7 +337,6 @@ class ThreadIntegrationHelper {
     );
   }
 
-  /// Send member joined message
   static Future<void> sendMemberJoinedMessage({
     required String projectId,
     required ProjectMember member,
@@ -296,7 +349,6 @@ class ThreadIntegrationHelper {
     );
   }
 
-  /// Send member left message
   static Future<void> sendMemberLeftMessage({
     required String projectId,
     required String userName,
@@ -307,6 +359,25 @@ class ThreadIntegrationHelper {
       message: '👋 $userName left the project',
       threadProvider: threadProvider,
     );
+  }
+
+  static String _getDefaultDescription(String subThreadName) {
+    final name = subThreadName.toLowerCase();
+    if (name.contains('general')) return 'General discussion';
+    if (name.contains('tasks')) return 'Task-related discussions';
+    if (name.contains('updates')) return 'Project updates';
+    return 'Thread discussion';
+  }
+
+  static MemberRole _convertProjectRoleToMemberRole(ProjectRole projectRole) {
+    switch (projectRole) {
+      case ProjectRole.admin:
+        return MemberRole.admin;
+      case ProjectRole.member:
+        return MemberRole.member;
+      case ProjectRole.viewer:
+        return MemberRole.member;
+    }
   }
 }
 

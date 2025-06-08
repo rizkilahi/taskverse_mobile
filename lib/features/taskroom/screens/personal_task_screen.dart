@@ -8,7 +8,7 @@ import '../widgets/daily_task_list.dart';
 import '../widgets/deadline_task_list.dart';
 
 class PersonalTaskScreen extends StatefulWidget {
-  const PersonalTaskScreen({Key? key}) : super(key: key);
+  const PersonalTaskScreen({super.key});
 
   @override
   State<PersonalTaskScreen> createState() => _PersonalTaskScreenState();

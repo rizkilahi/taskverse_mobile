@@ -10,14 +10,14 @@ import '../widgets/thread_area_widget.dart';
 import '../../../core/utils/ui_utils.dart';
 
 class TaskRoomScreen extends StatefulWidget {
-  const TaskRoomScreen({Key? key}) : super(key: key);
+  const TaskRoomScreen({super.key});
 
   @override
   State<TaskRoomScreen> createState() => _TaskRoomScreenState();
 }
 
 class _TaskRoomScreenState extends State<TaskRoomScreen> {
-  int _currentIndex = 1; // TaskRoom selected
+  final int _currentIndex = 1; // TaskRoom selected
 
   @override
   Widget build(BuildContext context) {

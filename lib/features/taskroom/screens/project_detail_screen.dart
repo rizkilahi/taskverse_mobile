@@ -1,13 +1,17 @@
-// File: lib/features/taskroom/screens/project_detail_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../config/themes/app_colors.dart';
 import '../../../config/themes/app_text_styles.dart';
 import '../../../data/models/project_model.dart';
+import '../../../data/models/project_task_model.dart';
 import '../../../data/models/user_model.dart';
 import '../providers/project_provider.dart';
-import '../providers/task_provider.dart';
+import '../providers/project_task_provider.dart';
+import '../../thread/providers/thread_provider.dart';
+import '../widgets/project_task_card_task.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
+import '../../thread/screens/thread_screen.dart';
+import '../helpers/thread_integration_help.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -17,27 +21,56 @@ class ProjectDetailScreen extends StatefulWidget {
     required this.projectId,
   }) : super(key: key);
 
-  @override
-  State<ProjectDetailScreen> createState() => _ProjectDetailScreenState();
+    @override
+  State<ProjectDetailScreen> createState() {
+    if (projectId.isEmpty) {
+      print('❌ ProjectDetailScreen: Empty projectId provided to constructor');
+    }
+    return _ProjectDetailScreenState();
+  }
 }
+
 
 class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   ProjectModel? project;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    
-    // Get project data
+void initState() {
+  super.initState();
+  _tabController = TabController(length: 3, vsync: this);
+  
+  // PERBAIKAN: Validasi projectId sebelum dipanggil
+  if (widget.projectId.isEmpty) {
+    print('❌ ProjectDetailScreen: Empty projectId received in initState');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-      setState(() {
-        project = projectProvider.getProjectById(widget.projectId);
-      });
+      if (mounted) {
+      Navigator.pushReplacementNamed(context, '/taskroom');
+    }
     });
+    return;
   }
+  
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+     if (!mounted) return;
+    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+    final foundProject = projectProvider.getProjectById(widget.projectId);
+    
+    if (foundProject != null) {
+      setState(() {
+        project = foundProject;
+      });
+      // Fetch project tasks
+      Provider.of<ProjectTaskProvider>(context, listen: false)
+          .fetchTasksByProjectId(widget.projectId);
+    } else {
+      print('❌ ProjectDetailScreen: Project with ID "${widget.projectId}" not found');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/taskroom');
+      }
+  }
+ });
+}
 
   @override
   void dispose() {
@@ -47,276 +80,363 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     if (project == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Project Details')),
-        body: const Center(
-          child: Text('Project not found'),
+        appBar: AppBar(
+          title: const Text('Project Details'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, '/taskroom');
+            },
+          ),
+        ),
+        body: const EmptyStateWidget(
+          message: 'Project not found\nTry creating a new project to get started',
+          icon: Icons.error_outline,
         ),
       );
     }
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Custom App Bar with project info
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                project!.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primary,
-                      AppColors.primary.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      const SizedBox(height: 40), // Space for app bar
-                      if (project!.description != null) ...[
-                        Text(
-                          project!.description!,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      // Project stats
-                      Row(
-                        children: [
-                          _buildStatItem(Icons.people, '${project!.members.length}', 'Members'),
-                          const SizedBox(width: 20),
-                          _buildStatItem(Icons.task, '${project!.taskCount}', 'Tasks'),
-                          const SizedBox(width: 20),
-                          _buildStatItem(Icons.chat, '${project!.threadCount}', 'Threads'),
+      body: DefaultTabController(
+        length: 3,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: screenHeight * 0.22,
+              automaticallyImplyLeading: false,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              flexibleSpace: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double top = constraints.biggest.height;
+                  final bool isCollapsed = top <= kToolbarHeight + MediaQuery.of(context).padding.top;
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.primary,
+                          AppColors.secondary,
                         ],
                       ),
+                    ),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          top: isCollapsed ? 0 : 10,
+                          left: 12,
+                          right: 12,
+                          bottom: isCollapsed ? 10 : kToolbarHeight,
+                        ),
+                        child: Row(
+                          crossAxisAlignment:
+                              isCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              onPressed: () {
+                                Navigator.pushReplacementNamed(context, '/taskroom');
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 200),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: isCollapsed ? 20 : screenWidth * 0.06,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Montserrat',
+                                ),
+                                child: Text(
+                                  project!.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(kToolbarHeight),
+                child: Container(
+                  height: kToolbarHeight,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary,
+                        AppColors.secondary,
+                      ],
+                    ),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorColor: Colors.white,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white70,
+                    labelStyle: AppTextStyles.bodyMedium.copyWith(fontFamily: 'Montserrat'),
+                    unselectedLabelStyle: AppTextStyles.bodySmall.copyWith(fontFamily: 'Montserrat'),
+                    indicatorWeight: 3,
+                    tabs: const [
+                      Tab(text: 'Overview'),
+                      Tab(text: 'Tasks'),
+                      Tab(text: 'Members'),
                     ],
                   ),
                 ),
               ),
             ),
-            bottom: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.white,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              tabs: const [
-                Tab(text: 'Overview'),
-                Tab(text: 'Tasks'),
-                Tab(text: 'Members'),
-              ],
+            SliverFillRemaining(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOverviewTab(screenWidth, screenHeight),
+                  _buildTasksTab(screenWidth, screenHeight),
+                  _buildMembersTab(screenWidth, screenHeight),
+                ],
+              ),
             ),
-          ),
-          
-          // Tab content
-          SliverFillRemaining(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildOverviewTab(),
-                _buildTasksTab(),
-                _buildMembersTab(),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: _buildProjectFAB(),
     );
   }
 
-  Widget _buildStatItem(IconData icon, String value, String label) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.white70, size: 16),
-        const SizedBox(width: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOverviewTab() {
+  Widget _buildOverviewTab(double screenWidth, double screenHeight) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(screenWidth * 0.04),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Project description
           if (project!.description != null) ...[
-            const Text('Description', style: AppTextStyles.heading3),
-            const SizedBox(height: 8),
+            Text(
+              'Description',
+              style: AppTextStyles.heading3.copyWith(
+                fontFamily: 'Montserrat',
+                fontSize: screenWidth * 0.045,
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(screenWidth * 0.04),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.secondary.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(project!.description!),
+              child: Text(
+                project!.description!,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: Colors.white,
+                  fontFamily: 'Montserrat',
+                  fontSize: screenWidth * 0.035,
+                ),
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: screenHeight * 0.03),
           ],
-          
-          // Quick actions
-          const Text('Quick Actions', style: AppTextStyles.heading3),
-          const SizedBox(height: 12),
+          Text(
+            'Quick Actions',
+            style: AppTextStyles.heading3.copyWith(
+              fontFamily: 'Montserrat',
+              fontSize: screenWidth * 0.045,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.015),
           Row(
             children: [
               Expanded(
                 child: _buildActionCard(
-                  icon: Icons.chat,
+                  emoji: '💬',
                   title: 'Open Thread',
                   subtitle: 'Join project discussion',
-                  onTap: () {
-                    // TODO: Navigate to project thread
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Opening project thread...')),
-                    );
-                  },
+                  onTap: () => _openProjectThread(),
+                  screenWidth: screenWidth,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: screenWidth * 0.025),
               Expanded(
                 child: _buildActionCard(
-                  icon: Icons.add_task,
+                  emoji: '📋',
                   title: 'Add Task',
                   subtitle: 'Create new project task',
                   onTap: () {
-                    // TODO: Navigate to create project task
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Create project task - Coming Soon')),
-                    );
+                    Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
+                        .then((result) {
+                      if (result == true) {
+                        Provider.of<ProjectTaskProvider>(context, listen: false)
+                            .fetchTasksByProjectId(project!.id);
+                      }
+                    });
                   },
+                  screenWidth: screenWidth,
                 ),
               ),
             ],
           ),
-          
-          const SizedBox(height: 24),
-          
-          // Recent activity
-          const Text('Recent Activity', style: AppTextStyles.heading3),
-          const SizedBox(height: 12),
-          _buildActivityList(),
+          SizedBox(height: screenHeight * 0.03),
+          Text(
+            'Recent Activity',
+            style: AppTextStyles.heading3.copyWith(
+              fontFamily: 'Montserrat',
+              fontSize: screenWidth * 0.045,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.015),
+          _buildActivityList(screenWidth),
         ],
       ),
     );
   }
 
-  Widget _buildTasksTab() {
-    return Column(
-      children: [
-        // Tasks header with add button
-        Container(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Text('Project Tasks', style: AppTextStyles.heading3),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Create project task
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Create project task - Coming Soon')),
-                  );
-                },
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Task'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
+  Widget _buildTasksTab(double screenWidth, double screenHeight) {
+    return Consumer<ProjectTaskProvider>(
+      builder: (context, taskProvider, _) {
+        if (taskProvider.loadingState == ProjectTaskLoadingState.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (taskProvider.loadingState == ProjectTaskLoadingState.error) {
+          return EmptyStateWidget(
+            message: taskProvider.errorMessage ?? 'Failed to load tasks',
+            icon: Icons.error,
+          );
+        }
+        final tasks = taskProvider.tasks;
+        return Column(
+          children: [
+            Container(
+              padding: EdgeInsets.all(screenWidth * 0.04),
+              child: Row(
+                children: [
+                  Text(
+                    'Project Tasks',
+                    style: AppTextStyles.heading3.copyWith(
+                      fontFamily: 'Montserrat',
+                      fontSize: screenWidth * 0.045,
+                    ),
+                  ),
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
+                          .then((result) {
+                        if (result == true) {
+                         Provider.of<ProjectTaskProvider>(context, listen: false)
+                            .fetchTasksByProjectId(project!.id);
+                      }
+                      });
+                    },
+                    icon: Icon(Icons.add, size: screenWidth * 0.045),
+                    label: Text(
+                      'Add Task',
+                      style: TextStyle(fontSize: screenWidth * 0.035, fontFamily: 'Montserrat'),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.04,
+                        vertical: screenHeight * 0.015,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        
-        // Tasks list
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: project!.taskCount > 0
-                ? _buildProjectTasksList()
-                : _buildEmptyTasksState(),
-          ),
-        ),
-      ],
+            ),
+            Expanded(
+              child: tasks.isNotEmpty
+                  ? _buildProjectTasksList(tasks, screenWidth)
+                  : EmptyStateWidget(
+                      message: 'Oops, still echoing silence...\nCreate a task to get started!',
+                      icon: Icons.task_alt,
+                      actionText: 'Add Task',
+                      onAction: () {
+                        Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
+                            .then((result) {
+                          if (result == true) {
+                            Provider.of<ProjectTaskProvider>(context, listen: false)
+                            .fetchTasksByProjectId(project!.id);
+                          }
+                        });
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildMembersTab() {
+  Widget _buildMembersTab(double screenWidth, double screenHeight) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(screenWidth * 0.04),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Members header
           Row(
             children: [
-              Text('Members (${project!.members.length})', style: AppTextStyles.heading3),
+              Text(
+                'Members (${project!.members.length})',
+                style: AppTextStyles.heading3.copyWith(
+                  fontFamily: 'Montserrat',
+                  fontSize: screenWidth * 0.045,
+                ),
+              ),
               const Spacer(),
               if (project!.isUserAdmin(UserModel.currentUser.id))
                 ElevatedButton.icon(
                   onPressed: () {
                     _showAddMemberDialog();
                   },
-                  icon: const Icon(Icons.person_add, size: 18),
-                  label: const Text('Add Member'),
+                  icon: Icon(Icons.person_add, size: screenWidth * 0.045),
+                  label: Text(
+                    'Add Member',
+                    style: TextStyle(fontSize: screenWidth * 0.035, fontFamily: 'Montserrat'),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.04,
+                      vertical: screenHeight * 0.015,
+                    ),
                   ),
                 ),
             ],
           ),
-          
-          const SizedBox(height: 16),
-          
-          // Members list
+          SizedBox(height: screenHeight * 0.02),
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: project!.members.length,
             itemBuilder: (context, index) {
               final member = project!.members[index];
-              return _buildMemberCard(member);
+              return _buildMemberCard(member, screenWidth);
             },
           ),
         ],
@@ -325,36 +445,52 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
   }
 
   Widget _buildActionCard({
-    required IconData icon,
+    required String emoji,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    required double screenWidth,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
+      splashColor: AppColors.primary.withOpacity(0.2),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(screenWidth * 0.04),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+          color: const Color(0xFF0C9371).withOpacity(0.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.primary, size: 32),
-            const SizedBox(height: 8),
+            Text(
+              emoji,
+              style: TextStyle(fontSize: screenWidth * 0.08),
+            ),
+            SizedBox(height: screenWidth * 0.02),
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Montserrat',
+                fontSize: screenWidth * 0.035,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: screenWidth * 0.01),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.white70,
+                fontFamily: 'Montserrat',
+                fontSize: screenWidth * 0.03,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
           ],
@@ -363,8 +499,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
     );
   }
 
-  Widget _buildActivityList() {
-    // Dummy activity data - TODO: Implement real activity tracking
+  Widget _buildActivityList(double screenWidth) {
     final activities = [
       {'user': 'King', 'action': 'added a new task "UI Design"', 'time': '2h ago'},
       {'user': 'Alice', 'action': 'completed task "Research Phase"', 'time': '4h ago'},
@@ -379,15 +514,24 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
         final activity = activities[index];
         return ListTile(
           leading: CircleAvatar(
-            backgroundColor: AppColors.primary.withOpacity(0.1),
+            backgroundColor: AppColors.secondary.withOpacity(0.5),
+            radius: screenWidth * 0.05,
             child: Text(
               activity['user']![0],
-              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Montserrat',
+                fontSize: screenWidth * 0.035,
+              ),
             ),
           ),
           title: RichText(
             text: TextSpan(
-              style: DefaultTextStyle.of(context).style,
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontFamily: 'Montserrat',
+                fontSize: screenWidth * 0.035,
+              ),
               children: [
                 TextSpan(
                   text: activity['user'],
@@ -396,95 +540,118 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
                 TextSpan(text: ' ${activity['action']}'),
               ],
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          subtitle: Text(activity['time']!),
+          subtitle: Text(
+            activity['time']!,
+            style: AppTextStyles.bodySmall.copyWith(
+              fontFamily: 'Montserrat',
+              fontSize: screenWidth * 0.03,
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildProjectTasksList() {
-    // TODO: Implement actual project tasks list
-    return Center(
-      child: Text(
-        'Project tasks list\n(To be implemented)',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.grey[600]),
-      ),
+  Widget _buildProjectTasksList(List<ProjectTaskModel> tasks, double screenWidth) {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenWidth * 0.02),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: screenWidth * 0.02),
+          child: ProjectTaskCard(task: tasks[index]),
+        );
+      },
     );
   }
 
-  Widget _buildEmptyTasksState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.task_alt, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          const Text(
-            'No project tasks yet',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your first project task to get started',
-            style: TextStyle(color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMemberCard(ProjectMember member) {
+  Widget _buildMemberCard(ProjectMember member, double screenWidth) {
     final isCurrentUser = member.userId == UserModel.currentUser.id;
     final canManageMembers = project!.isUserAdmin(UserModel.currentUser.id);
     
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: screenWidth * 0.02),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: const Color(0xFF0C9371).withOpacity(0.5),
       child: ListTile(
+        contentPadding: EdgeInsets.all(screenWidth * 0.03),
         leading: CircleAvatar(
           backgroundColor: AppColors.primary,
+          radius: screenWidth * 0.05,
           child: Text(
             member.user.name[0].toUpperCase(),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Montserrat',
+              fontSize: screenWidth * 0.035,
+            ),
           ),
         ),
         title: Row(
           children: [
-            Text(member.user.name),
+            Expanded(
+              child: Text(
+                member.user.name,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: Colors.white,
+                  fontFamily: 'Montserrat',
+                  fontSize: screenWidth * 0.035,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (isCurrentUser) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: screenWidth * 0.02),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.015, vertical: screenWidth * 0.005),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
+                child: Text(
                   'You',
-                  style: TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Montserrat',
+                    fontSize: screenWidth * 0.025,
+                  ),
                 ),
               ),
             ],
           ],
         ),
-        subtitle: Text(member.user.email),
+        subtitle: Text(
+          member.user.email,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: Colors.white70,
+            fontFamily: 'Montserrat',
+            fontSize: screenWidth * 0.03,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: screenWidth * 0.01),
               decoration: BoxDecoration(
                 color: _getRoleColor(member.role).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 _getRoleText(member.role),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                style: AppTextStyles.caption.copyWith(
                   color: _getRoleColor(member.role),
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Montserrat',
+                  fontSize: screenWidth * 0.025,
                 ),
               ),
             ),
@@ -527,25 +694,34 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
   void _showProjectActionsDialog() {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.chat),
+              leading: const Text('💬', style: TextStyle(fontSize: 24)),
               title: const Text('Open Project Thread'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to thread
+                _openProjectThread();
               },
             ),
             ListTile(
-              leading: const Icon(Icons.add_task),
+              leading: const Text('📋', style: TextStyle(fontSize: 24)),
               title: const Text('Add Project Task'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Add project task
+                Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
+                    .then((result) {
+                  if (result == true) {
+                    Provider.of<ProjectTaskProvider>(context, listen: false)
+                        .fetchTasksByProjectId(project!.id);
+                  }
+                });
               },
             ),
             if (project!.isUserAdmin(UserModel.currentUser.id)) ...[
@@ -554,7 +730,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
                 title: const Text('Project Settings'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Project settings
+                  Navigator.pushNamed(context, '/project-settings', arguments: project!.id);
                 },
               ),
             ],
@@ -564,15 +740,136 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
     );
   }
 
+  Future<void> _openProjectThread() async {
+  final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
+  final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+
+  print('🔍 ProjectDetailScreen: Checking thread for project ${project!.id}...');
+  print('🔍 ProjectDetailScreen: Current project.threadId: ${project!.threadId}');
+
+  // Kalau threadId null, bikin thread baru
+  if (project!.threadId == null || project!.threadId!.isEmpty) {
+    print('🔧 ProjectDetailScreen: threadId is null or empty, creating new thread...');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Creating project thread...')),
+    );
+    final newThread = await ThreadIntegrationHelper.createProjectThread(
+      project: project!,
+      threadProvider: threadProvider,
+    );
+    print('✅ ProjectDetailScreen: New thread created with ID: ${newThread.id}');
+
+    // Update project dengan threadId yang baru
+    await projectProvider.updateProject(
+      project!.id,
+      threadId: newThread.id,
+      threadCount: (project!.threadCount ?? 0) + 1,
+    );
+
+    // Refresh project data
+    setState(() {
+      project = projectProvider.getProjectById(widget.projectId);
+    });
+    print('🔍 ProjectDetailScreen: Updated project.threadId: ${project!.threadId}');
+  }
+
+  // Validasi threadId
+  if (project!.threadId == null || project!.threadId!.isEmpty) {
+    print('❌ ProjectDetailScreen: Failed to set threadId for project ${project!.id}');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Failed to create project thread')),
+    );
+    return;
+  }
+
+  // Pastiin thread ada di ThreadProvider
+  final mainThreadExists = threadProvider.threads.any((thread) => thread.id == project!.threadId);
+  if (!mainThreadExists) {
+    print('❌ ProjectDetailScreen: Main thread with ID ${project!.threadId} not found in ThreadProvider');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Project thread not found')),
+    );
+    return;
+  }
+
+  // Cari sub-thread dari project thread - PERBAIKAN UTAMA
+  print('🔍 ProjectDetailScreen: Fetching sub-threads for threadId: ${project!.threadId}');
+  final subThreads = threadProvider.getSubThreads(project!.threadId!);
+  print('🔍 ProjectDetailScreen: Found ${subThreads.length} sub-threads: ${subThreads.map((t) => t.name).toList()}');
+
+  // PERBAIKAN: Gunakan logika yang sama dengan ThreadAreaWidget
+  late dynamic targetSubThread;
+  
+  if (subThreads.isNotEmpty) {
+    // Cari #general dulu
+    final generalSubThread = subThreads.where((t) => t.name.toLowerCase() == '#general').firstOrNull;
+    
+    if (generalSubThread != null) {
+      targetSubThread = generalSubThread;
+      print('🔍 ProjectDetailScreen: Found #general sub-thread: ${targetSubThread.id}');
+    } else {
+      // Kalau #general gak ada, ambil sub-thread pertama
+      targetSubThread = subThreads.first;
+      print('🔍 ProjectDetailScreen: #general not found, using first sub-thread: ${targetSubThread.name} (${targetSubThread.id})');
+    }
+  } else {
+    // Kalau gak ada sub-threads sama sekali, fallback ke main thread
+    print('⚠️ ProjectDetailScreen: No sub-threads found, falling back to main thread');
+    targetSubThread = threadProvider.threads.firstWhere((thread) => thread.id == project!.threadId!);
+  }
+
+  print('🔍 ProjectDetailScreen: Selected thread to open: ${targetSubThread.name} (ID: ${targetSubThread.id})');
+
+  // Select thread - PERBAIKAN: pastikan select thread yang benar
+  threadProvider.selectThread(targetSubThread.id);
+
+  // PERBAIKAN: Gunakan navigasi yang konsisten dengan ThreadAreaWidget
+  final currentRoute = ModalRoute.of(context)?.settings.name;
+  print('🔍 ProjectDetailScreen: Current route: $currentRoute');
+  
+  if (currentRoute == '/thread') {
+    print('🔧 ProjectDetailScreen: Already on ThreadScreen, popping until ThreadScreen');
+    Navigator.popUntil(context, (route) => route.settings.name == '/thread');
+  } else {
+    print('🔧 ProjectDetailScreen: Pushing to ThreadScreen with arguments: ${targetSubThread.id}');
+    Navigator.pushNamed(context, '/thread', arguments: targetSubThread.id);
+  }
+}
+
+  void _createTaskAndThread() async {
+    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+    final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
+
+    if (project!.threadId == null) {
+      final threadId = 'project-${project!.id}';
+      await threadProvider.createHQThread(
+        name: ThreadIntegrationHelper.formatProjectThreadName(project!.name),
+        description: 'Discussion for ${project!.name}',
+        members: project!.members
+            .map((m) => ThreadIntegrationHelper.convertProjectMemberToThreadMember(m))
+            .toList(),
+        customSubThreads: ['general', 'tasks', 'updates'],
+      );
+
+      projectProvider.updateProject(
+        project!.id,
+        threadId: threadId,
+        threadCount: (project!.threadCount ?? 0) + 1,
+      );
+
+      setState(() {
+        project = projectProvider.getProjectById(widget.projectId);
+      });
+    }
+  }
+
   void _showAddMemberDialog() {
-    // TODO: Implement add member dialog
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Add member functionality - Coming Soon')),
     );
   }
 
   void _showChangeRoleDialog(ProjectMember member) {
-    // TODO: Implement change role dialog
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Change role for ${member.user.name} - Coming Soon')),
     );
@@ -608,11 +905,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTi
   Color _getRoleColor(ProjectRole role) {
     switch (role) {
       case ProjectRole.admin:
-        return Colors.red;
+        return AppColors.error;
       case ProjectRole.member:
-        return Colors.blue;
+        return AppColors.primary;
       case ProjectRole.viewer:
-        return Colors.green;
+        return AppColors.success;
     }
   }
 

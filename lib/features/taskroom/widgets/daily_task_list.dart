@@ -6,7 +6,7 @@ import '../providers/task_provider.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 
 class DailyTaskList extends StatelessWidget {
-  const DailyTaskList({Key? key}) : super(key: key);
+  const DailyTaskList({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 
 class PersonalTaskCard extends StatelessWidget {
-  const PersonalTaskCard({Key? key}) : super(key: key);
+  const PersonalTaskCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -60,11 +60,11 @@ class PersonalTaskCard extends StatelessWidget {
                         // Add personal task
                         Navigator.pushNamed(context, '/create-task');
                       },
-                      child: const Icon(Icons.add),
                       style: ElevatedButton.styleFrom(
                         shape: const CircleBorder(),
                         padding: const EdgeInsets.all(12),
                       ),
+                      child: const Icon(Icons.add),
                     ),
                   ],
                 ),

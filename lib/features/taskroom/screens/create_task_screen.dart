@@ -6,7 +6,7 @@ import '../../../data/models/task_model.dart';
 import '../providers/task_provider.dart';
 
 class CreateTaskScreen extends StatefulWidget {
-  const CreateTaskScreen({Key? key}) : super(key: key);
+  const CreateTaskScreen({super.key});
 
   @override
   State<CreateTaskScreen> createState() => _CreateTaskScreenState();
@@ -155,7 +155,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 Text(
                   _dueTime == null
                       ? 'Select a time'
-                      : '${_dueTime!.format(context)}',
+                      : _dueTime!.format(context),
                 ),
               ],
             ),

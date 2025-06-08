@@ -1,4 +1,5 @@
 import '../models/user_model.dart';
+import '../models/mention_model.dart';
 
 enum MessageType { text, image, file, system }
 enum FileType { image, document, audio, video, other }
@@ -13,8 +14,10 @@ class MessageModel {
   final DateTime? updatedAt;
   final bool isEdited;
   final List<MessageAttachment>? attachments;
-  final String? replyToMessageId; // Untuk reply functionality
-  final MessageModel? replyToMessage; // Reference ke message yang di-reply
+  final String? replyToMessageId;
+  final MessageModel? replyToMessage;
+  final bool isUnread;
+  final List<MentionModel> mentions;
 
   MessageModel({
     required this.id,
@@ -28,9 +31,10 @@ class MessageModel {
     this.attachments,
     this.replyToMessageId,
     this.replyToMessage,
+    this.isUnread = true,
+    this.mentions = const [],
   });
 
-  // Membuat salinan dengan nilai yang diubah
   MessageModel copyWith({
     String? id,
     String? threadId,
@@ -43,6 +47,8 @@ class MessageModel {
     List<MessageAttachment>? attachments,
     String? replyToMessageId,
     MessageModel? replyToMessage,
+    bool? isUnread,
+    List<MentionModel>? mentions,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -56,10 +62,11 @@ class MessageModel {
       attachments: attachments ?? this.attachments,
       replyToMessageId: replyToMessageId ?? this.replyToMessageId,
       replyToMessage: replyToMessage ?? this.replyToMessage,
+      isUnread: isUnread ?? this.isUnread,
+      mentions: mentions ?? this.mentions,
     );
   }
 
-  // Factory untuk membuat dari JSON (untuk integrasi backend)
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
       id: json['id'],
@@ -68,9 +75,7 @@ class MessageModel {
       content: json['content'],
       type: _getMessageTypeFromString(json['type']),
       createdAt: DateTime.parse(json['created_at']),
-      updatedAt: json['updated_at'] != null 
-          ? DateTime.parse(json['updated_at']) 
-          : null,
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
       isEdited: json['is_edited'] ?? false,
       attachments: (json['attachments'] as List?)
           ?.map((a) => MessageAttachment.fromJson(a))
@@ -79,10 +84,13 @@ class MessageModel {
       replyToMessage: json['reply_to_message'] != null
           ? MessageModel.fromJson(json['reply_to_message'])
           : null,
+      isUnread: json['is_unread'] ?? true,
+      mentions: (json['mentions'] as List? ?? [])
+          .map((m) => MentionModel.fromJson(m))
+          .toList(),
     );
   }
 
-  // Konversi ke JSON (untuk integrasi backend)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -96,10 +104,11 @@ class MessageModel {
       'attachments': attachments?.map((a) => a.toJson()).toList(),
       'reply_to_message_id': replyToMessageId,
       'reply_to_message': replyToMessage?.toJson(),
+      'is_unread': isUnread,
+      'mentions': mentions.map((m) => m.toJson()).toList(),
     };
   }
 
-  // Helper untuk parse message type dari string
   static MessageType _getMessageTypeFromString(String? typeStr) {
     switch (typeStr) {
       case 'text':
@@ -115,7 +124,6 @@ class MessageModel {
     }
   }
 
-  // Helper method untuk format waktu
   String getFormattedTime() {
     final now = DateTime.now();
     final diff = now.difference(createdAt);
@@ -126,41 +134,66 @@ class MessageModel {
       return '${diff.inHours}h ago';
     } else if (diff.inMinutes > 0) {
       return '${diff.inMinutes}m ago';
-    } else {
-      return 'Just now';
     }
+    return 'Just now';
   }
 
-  // MINIMAL Dummy data untuk testing - sesuai gambar yang diberikan
   static List<MessageModel> getMinimalDummyMessages(String threadId) {
     final currentUser = UserModel.currentUser;
-    final otherUser = UserModel(
-      id: '2',
-      name: 'King',
-      email: 'king@example.com',
-    );
+    final otherUser1 = UserModel(id: '1', name: 'Tombol', email: 'tombol@example.com');
+    final otherUser2 = UserModel(id: '3', name: 'Emily', email: 'emily@example.com');
 
     return [
       MessageModel(
         id: 'msg-1',
         threadId: threadId,
-        sender: otherUser,
-        content: "Hey team! How's the mobile app development going?",
+        sender: otherUser1,
+        content: "Hey team @all! How's the mobile app development going?",
         type: MessageType.text,
         createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        isUnread: true,
+        mentions: [
+          MentionModel(
+            messageId: 'msg-1',
+            mentionText: '@all',
+          ),
+        ],
       ),
       MessageModel(
         id: 'msg-2',
         threadId: threadId,
         sender: currentUser,
-        content: 'Making good progress! Just finished the thread functionality.',
+        content: 'Making good progress @username! Just finished the thread functionality.',
         type: MessageType.text,
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+        isUnread: false,
+        mentions: [
+          MentionModel(
+            messageId: 'msg-2',
+            mentionText: '@King',
+            userId: '2',
+          ),
+        ],
+      ),
+      MessageModel(
+        id: 'msg-3',
+        threadId: 'project-1-1', // #UI thread
+        sender: otherUser2,
+        content: '@King, can you finish the UI prototype ASAP?',
+        type: MessageType.text,
+        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        isUnread: true,
+        mentions: [
+          MentionModel(
+            messageId: 'msg-3',
+            mentionText: '@King',
+            userId: '2', // King
+          ),
+        ],
       ),
     ];
   }
 
-  // Legacy dummy data (untuk backward compatibility)
   static List<MessageModel> getDummyMessages(String threadId) {
     return getMinimalDummyMessages(threadId);
   }
@@ -169,10 +202,10 @@ class MessageModel {
 class MessageAttachment {
   final String id;
   final String fileName;
-  final int fileSize; // in bytes
+  final int fileSize; // Fixed: changed from file_size to fileSize
   final FileType fileType;
-  final String url; // URL untuk download/preview
-  final String? thumbnailUrl; // Untuk preview image/video
+  final String url;
+  final String? thumbnailUrl;
   final String? mimeType;
 
   MessageAttachment({
@@ -185,7 +218,6 @@ class MessageAttachment {
     this.mimeType,
   });
 
-  // Membuat salinan dengan nilai yang diubah
   MessageAttachment copyWith({
     String? id,
     String? fileName,
@@ -206,7 +238,6 @@ class MessageAttachment {
     );
   }
 
-  // Factory untuk membuat dari JSON
   factory MessageAttachment.fromJson(Map<String, dynamic> json) {
     return MessageAttachment(
       id: json['id'],
@@ -219,7 +250,6 @@ class MessageAttachment {
     );
   }
 
-  // Konversi ke JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -232,7 +262,6 @@ class MessageAttachment {
     };
   }
 
-  // Helper untuk parse file type dari string
   static FileType _getFileTypeFromString(String? typeStr) {
     switch (typeStr) {
       case 'image':
@@ -248,7 +277,6 @@ class MessageAttachment {
     }
   }
 
-  // Helper untuk format ukuran file
   String getFormattedSize() {
     if (fileSize < 1024) return '${fileSize}B';
     if (fileSize < 1048576) return '${(fileSize / 1024).toStringAsFixed(1)}KB';
@@ -256,7 +284,6 @@ class MessageAttachment {
     return '${(fileSize / 1073741824).toStringAsFixed(1)}GB';
   }
 
-  // Helper untuk mendapatkan icon berdasarkan file type
   String getFileIcon() {
     switch (fileType) {
       case FileType.image:

@@ -3,6 +3,7 @@ import '../../../data/models/project_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/thread_model.dart';
 import '../../thread/providers/thread_provider.dart';
+import '../helpers/thread_integration_help.dart';
 
 enum ProjectLoadingState { idle, loading, success, error }
 
@@ -43,9 +44,10 @@ class ProjectProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isLoading => _loadingState == ProjectLoadingState.loading;
 
-  // Setter untuk ThreadProvider (dependency injection)
+  // CRITICAL: Setter untuk ThreadProvider (dependency injection)
   void setThreadProvider(ThreadProvider threadProvider) {
     _threadProvider = threadProvider;
+    print('🔧 ProjectProvider: ThreadProvider dependency injected');
   }
 
   // Get projects where current user is member
@@ -83,9 +85,11 @@ class ProjectProvider with ChangeNotifier {
       _projects = ProjectModel.dummyProjects;
       
       _setLoadingState(ProjectLoadingState.success);
+      print('🔧 ProjectProvider: Projects fetched successfully (${_projects.length} projects)');
     } catch (e) {
       _setLoadingState(ProjectLoadingState.error);
       _errorMessage = 'Failed to fetch projects: $e';
+      print('❌ ProjectProvider: Failed to fetch projects: $e');
     }
   }
 
@@ -97,6 +101,8 @@ class ProjectProvider with ChangeNotifier {
       // TODO: Implement actual API call
       // final response = await _apiService.post('/projects', data: request.toJson());
       // final newProject = ProjectModel.fromJson(response.data);
+      
+      print('🔧 ProjectProvider: Creating project "${request.name}"...');
       
       // Simulation: Create project locally
       final newProjectId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -116,7 +122,6 @@ class ProjectProvider with ChangeNotifier {
       // Add other members
       for (final memberId in request.memberIds) {
         if (memberId != currentUser.id) {
-          // TODO: Fetch actual user data from backend
           final user = _getDummyUser(memberId);
           final role = request.memberRoles[memberId] ?? ProjectRole.member;
           
@@ -136,25 +141,31 @@ class ProjectProvider with ChangeNotifier {
         creatorId: currentUser.id,
         creator: currentUser,
         members: members,
+        taskCount: 0,
+        threadCount: 0,
+        status: ProjectStatus.active,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        threadId: 'project-$newProjectId', // Will be created by thread system
+        threadId: 'project-$newProjectId',
       );
       
       // Add to local list
       _projects.add(newProject);
       
-      // Auto-create project thread
+      // CRITICAL: Auto-create project thread using ThreadIntegrationHelper
       await _createProjectThread(newProject);
       
       _setLoadingState(ProjectLoadingState.success);
       _errorMessage = null;
+      
+      print('✅ ProjectProvider: Project "${newProject.name}" created successfully with ID: ${newProject.id}');
       
       return newProject;
       
     } catch (e) {
       _setLoadingState(ProjectLoadingState.error);
       _errorMessage = 'Failed to create project: $e';
+      print('❌ ProjectProvider: Failed to create project: $e');
       return null;
     }
   }
@@ -162,16 +173,10 @@ class ProjectProvider with ChangeNotifier {
   /// Add member to project
   Future<bool> addMemberToProject(String projectId, String userId, ProjectRole role) async {
     try {
-      // TODO: Implement actual API call
-      // await _apiService.post('/projects/$projectId/members', data: {
-      //   'user_id': userId,
-      //   'role': role.toString().split('.').last,
-      // });
-      
       final projectIndex = _projects.indexWhere((p) => p.id == projectId);
       if (projectIndex != -1) {
         final project = _projects[projectIndex];
-        final user = _getDummyUser(userId); // TODO: Fetch from backend
+        final user = _getDummyUser(userId);
         
         final newMember = ProjectMember(
           userId: userId,
@@ -188,6 +193,15 @@ class ProjectProvider with ChangeNotifier {
           updatedAt: DateTime.now(),
         );
         
+        // ADDED: Update thread members using ThreadIntegrationHelper
+        if (_threadProvider != null) {
+          await ThreadIntegrationHelper.addMemberToProjectThreads(
+            projectId: projectId,
+            newMember: newMember,
+            threadProvider: _threadProvider!,
+          );
+        }
+        
         notifyListeners();
         return true;
       }
@@ -203,9 +217,6 @@ class ProjectProvider with ChangeNotifier {
   /// Remove member from project
   Future<bool> removeMemberFromProject(String projectId, String userId) async {
     try {
-      // TODO: Implement actual API call
-      // await _apiService.delete('/projects/$projectId/members/$userId');
-      
       final projectIndex = _projects.indexWhere((p) => p.id == projectId);
       if (projectIndex != -1) {
         final project = _projects[projectIndex];
@@ -218,6 +229,15 @@ class ProjectProvider with ChangeNotifier {
           members: updatedMembers,
           updatedAt: DateTime.now(),
         );
+        
+        // ADDED: Remove from thread members using ThreadIntegrationHelper
+        if (_threadProvider != null) {
+          await ThreadIntegrationHelper.removeMemberFromProjectThreads(
+            projectId: projectId,
+            userId: userId,
+            threadProvider: _threadProvider!,
+          );
+        }
         
         notifyListeners();
         return true;
@@ -236,15 +256,11 @@ class ProjectProvider with ChangeNotifier {
     String? name,
     String? description,
     ProjectStatus? status,
+    String? threadId,
+    int? threadCount,
+    int? taskCount,
   }) async {
     try {
-      // TODO: Implement actual API call
-      // await _apiService.put('/projects/$projectId', data: {
-      //   'name': name,
-      //   'description': description,
-      //   'status': status?.toString().split('.').last,
-      // });
-      
       final projectIndex = _projects.indexWhere((p) => p.id == projectId);
       if (projectIndex != -1) {
         final project = _projects[projectIndex];
@@ -253,6 +269,9 @@ class ProjectProvider with ChangeNotifier {
           name: name ?? project.name,
           description: description ?? project.description,
           status: status ?? project.status,
+          threadId: threadId ?? project.threadId,
+          threadCount: threadCount ?? project.threadCount,
+          taskCount: taskCount ?? project.taskCount,
           updatedAt: DateTime.now(),
         );
         
@@ -271,8 +290,13 @@ class ProjectProvider with ChangeNotifier {
   /// Delete project
   Future<bool> deleteProject(String projectId) async {
     try {
-      // TODO: Implement actual API call
-      // await _apiService.delete('/projects/$projectId');
+      // ADDED: Delete project threads using ThreadIntegrationHelper
+      if (_threadProvider != null) {
+        await ThreadIntegrationHelper.deleteProjectThreads(
+          projectId: projectId,
+          threadProvider: _threadProvider!,
+        );
+      }
       
       _projects.removeWhere((project) => project.id == projectId);
       notifyListeners();
@@ -284,11 +308,31 @@ class ProjectProvider with ChangeNotifier {
     }
   }
 
-  /// Get project by ID
+  /// Get project by ID dengan improved error handling
   ProjectModel? getProjectById(String projectId) {
     try {
-      return _projects.firstWhere((project) => project.id == projectId);
+      // IMPROVED: Trim whitespace dan explicit empty check
+      final trimmedId = projectId.trim();
+      
+      if (trimmedId.isEmpty) {
+        // HANYA LOG DI DEBUG MODE dan lebih informatif
+        assert(() {
+          print('⚠️ ProjectProvider: getProjectById called with empty ID');
+          print('📍 Available projects: ${_projects.map((p) => '${p.id}:${p.name}').join(', ')}');
+          return true;
+        }());
+        return null;
+      }
+      
+      return _projects.firstWhere((project) => project.id == trimmedId);
     } catch (e) {
+      // IMPROVED: Lebih detailed logging untuk debugging
+      assert(() {
+        print('⚠️ ProjectProvider: Project with ID "$projectId" not found');
+        print('📍 Available projects: ${_projects.map((p) => '${p.id}:${p.name}').join(', ')}');
+        print('📍 Search attempted for: "${projectId.trim()}"');
+        return true;
+      }());
       return null;
     }
   }
@@ -300,40 +344,41 @@ class ProjectProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Auto-create thread when project is created
+  /// CRITICAL: Auto-create thread when project is created
   Future<void> _createProjectThread(ProjectModel project) async {
-    if (_threadProvider != null) {
-      try {
-        // Create main project thread
-        final mainThread = ThreadModel(
-          id: project.threadId!,
-          name: '#${project.name}',
-          type: ThreadType.project,
-          projectId: project.id,
-          members: project.members.map((member) => 
-            // TODO: Convert ProjectMember to ThreadMember
-            // This is placeholder - actual implementation depends on ThreadMemberModel
-            throw UnimplementedError('Convert ProjectMember to ThreadMember')
-          ).toList(),
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
-          description: project.description,
-        );
-        
-        // TODO: Call thread provider to create thread
-        // await _threadProvider!.createThread(mainThread);
-        
-      } catch (e) {
-        debugPrint('Failed to create project thread: $e');
-        // Don't fail project creation if thread creation fails
-      }
+    if (_threadProvider == null) {
+      print('❌ ProjectProvider: ThreadProvider not available for creating project thread');
+      return;
+    }
+    
+    try {
+      print('🔧 ProjectProvider: Creating thread for project "${project.name}"...');
+      
+      // Use ThreadIntegrationHelper to create project thread
+      final createdThread = await ThreadIntegrationHelper.createProjectThread(
+        project: project,
+        threadProvider: _threadProvider!,
+      );
+      
+      print('✅ ProjectProvider: Project thread created successfully: ${createdThread.name}');
+      
+      // Send welcome message
+      await ThreadIntegrationHelper.sendWelcomeMessage(
+        project: project,
+        threadProvider: _threadProvider!,
+      );
+      
+      // Update project with threadId
+      updateProject(project.id, threadId: createdThread.id, threadCount: (project.threadCount ?? 0) + 1);
+          
+    } catch (e) {
+      print('❌ ProjectProvider: Failed to create project thread: $e');
+      // Don't fail project creation if thread creation fails
     }
   }
 
   /// Get dummy user data (TODO: Replace with actual backend call)
   UserModel _getDummyUser(String userId) {
-    // TODO: Implement actual user fetching from backend
-    // For now, return dummy users
     switch (userId) {
       case '2':
         return UserModel(id: '2', name: 'King', email: 'king@example.com');
@@ -355,5 +400,14 @@ class ProjectProvider with ChangeNotifier {
   /// Refresh projects
   Future<void> refreshProjects() async {
     await fetchProjects();
+  }
+
+  // TAMBAH: Method untuk debugging project IDs
+  void debugProjectIds() {
+    print('🔍 ProjectProvider Debug Info:');
+    print('   Total projects: ${_projects.length}');
+    for (var project in _projects) {
+      print('   - ID: "${project.id}" | Name: "${project.name}"');
+    }
   }
 }

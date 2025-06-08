@@ -4,7 +4,7 @@ import '../../../config/themes/app_colors.dart';
 import '../../../config/themes/app_text_styles.dart';
 
 class CalendarWidget extends StatelessWidget {
-  const CalendarWidget({Key? key}) : super(key: key);
+  const CalendarWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

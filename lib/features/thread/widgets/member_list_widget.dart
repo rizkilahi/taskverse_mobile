@@ -5,7 +5,7 @@ import '../../../data/models/thread_member_model.dart';
 import '../../../config/themes/app_colors.dart';
 
 class MemberListWidget extends StatelessWidget {
-  const MemberListWidget({Key? key}) : super(key: key);
+  const MemberListWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
