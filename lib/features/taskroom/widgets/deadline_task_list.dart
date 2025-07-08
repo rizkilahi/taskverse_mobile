@@ -14,10 +14,11 @@ class DeadlineTaskList extends StatelessWidget {
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, child) {
         final deadlineTasks = taskProvider.deadlineTasks;
-        
+
         if (deadlineTasks.isEmpty) {
           return EmptyStateWidget(
-            message: 'No deadline tasks yet. Add your first task with a deadline!',
+            message:
+                'No deadline tasks yet. Add your first task with a deadline!',
             icon: Icons.calendar_today,
             actionText: 'Add Deadline Task',
             onAction: () {
@@ -25,14 +26,14 @@ class DeadlineTaskList extends StatelessWidget {
             },
           );
         }
-        
+
         // Sort tasks by due date
         deadlineTasks.sort((a, b) {
           if (a.dueDate == null) return 1;
           if (b.dueDate == null) return -1;
           return a.dueDate!.compareTo(b.dueDate!);
         });
-        
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: deadlineTasks.length,
@@ -44,11 +45,12 @@ class DeadlineTaskList extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(
-                  color: task.isCompleted 
-                    ? Colors.green.withOpacity(0.5) // Completed
-                    : _isTaskOverdue(task) 
-                      ? Colors.red.withOpacity(0.5)  // Overdue
-                      : Colors.transparent,          // Normal
+                  color:
+                      task.isCompleted
+                          ? Colors.green.withOpacity(0.5) // Completed
+                          : _isTaskOverdue(task)
+                          ? Colors.red.withOpacity(0.5) // Overdue
+                          : Colors.transparent, // Normal
                   width: 1.5,
                 ),
               ),
@@ -60,15 +62,18 @@ class DeadlineTaskList extends StatelessWidget {
                       value: task.isCompleted,
                       activeColor: AppColors.secondary,
                       onChanged: (value) {
-                        taskProvider.updateTask(task.id, isCompleted: value);
+                        taskProvider.updateTask(
+                          task.copyWith(isCompleted: value),
+                        );
                       },
                     ),
                     title: Text(
                       task.title,
                       style: TextStyle(
-                        decoration: task.isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
+                        decoration:
+                            task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
                       ),
                     ),
                     subtitle: Column(
@@ -81,7 +86,9 @@ class DeadlineTaskList extends StatelessWidget {
                               const Icon(Icons.event, size: 14),
                               const SizedBox(width: 4),
                               Text(
-                                DateFormat('MMM dd, yyyy').format(task.dueDate!),
+                                DateFormat(
+                                  'MMM dd, yyyy',
+                                ).format(task.dueDate!),
                                 style: const TextStyle(fontSize: 12),
                               ),
                             ],
@@ -102,12 +109,20 @@ class DeadlineTaskList extends StatelessWidget {
                     ),
                   ),
                   // Tampilkan penanda jika task sudah selesai
-                  if (task.isCompleted) 
+                  if (task.isCompleted)
                     Padding(
-                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: 8,
+                      ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
+                          Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
                           SizedBox(width: 4),
                           Text(
                             'Completed task will be removed at midnight',
@@ -128,13 +143,13 @@ class DeadlineTaskList extends StatelessWidget {
       },
     );
   }
-  
+
   Widget _buildPriorityBadge(TaskPriority? priority) {
     if (priority == null) return const SizedBox.shrink();
-    
+
     Color color;
     String label;
-    
+
     switch (priority) {
       case TaskPriority.low:
         color = Colors.green;
@@ -149,7 +164,7 @@ class DeadlineTaskList extends StatelessWidget {
         label = 'High';
         break;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -167,7 +182,7 @@ class DeadlineTaskList extends StatelessWidget {
       ),
     );
   }
-  
+
   // Helper method untuk cek overdue
   bool _isTaskOverdue(TaskModel task) {
     if (task.dueDate == null) return false;

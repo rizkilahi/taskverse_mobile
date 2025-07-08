@@ -16,7 +16,6 @@ import '../../taskroom/providers/project_provider.dart';
 import '../../thread/providers/thread_provider.dart';
 // Import aliases to resolve TaskPriority conflict
 import '../../../data/models/task_model.dart' as task_model;
-import '../../../data/models/project_task_model.dart' as project_task_model;
 
 class ReminderWidget extends StatefulWidget {
   const ReminderWidget({super.key});

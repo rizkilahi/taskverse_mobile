@@ -27,21 +27,19 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
     _titleController = TextEditingController();
     _descriptionController = TextEditingController();
   }
-  
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
-  
-  void _saveTask() {
+
+  void _saveTask() async {
     if (_formKey.currentState!.validate()) {
-      // Generate a simple ID (you might want to use UUID in a real app)
-      final taskId = DateTime.now().millisecondsSinceEpoch.toString();
-      
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
       final newTask = TaskModel(
-        id: taskId,
+        id: '', // Let backend generate ID
         title: _titleController.text,
         description: _descriptionController.text,
         dueDate: _taskType == TaskType.deadline ? _dueDate : null,
@@ -50,21 +48,23 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         type: _taskType,
         priority: _taskType == TaskType.deadline ? _priority : null,
       );
-      
-      // Add task using provider
-      Provider.of<TaskProvider>(context, listen: false).addTask(newTask);
-      
-      // Navigate back
-      Navigator.pop(context);
+      final success = await taskProvider.addTask(newTask);
+      if (success) {
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(taskProvider.errorMessage ?? 'Failed to create task'),
+          ),
+        );
+      }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create New Task'),
-      ),
+      appBar: AppBar(title: const Text('Create New Task')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -99,7 +99,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               // Task Title
               TextFormField(
                 controller: _titleController,
@@ -115,7 +115,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              
+
               // Task Description
               TextFormField(
                 controller: _descriptionController,
@@ -127,42 +127,42 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ),
               const SizedBox(height: 16),
               // Due Time (for daily tasks)
-      if (_taskType == TaskType.daily) ...[
-        const Text('Reminder Time', style: AppTextStyles.heading3),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: () async {
-            final pickedTime = await showTimePicker(
-              context: context,
-              initialTime: _dueTime ?? TimeOfDay.now(),
-            );
-            if (pickedTime != null) {
-              setState(() {
-                _dueTime = pickedTime;
-              });
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.access_time),
-                const SizedBox(width: 8),
-                Text(
-                  _dueTime == null
-                      ? 'Select a time'
-                      : _dueTime!.format(context),
+              if (_taskType == TaskType.daily) ...[
+                const Text('Reminder Time', style: AppTextStyles.heading3),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: _dueTime ?? TimeOfDay.now(),
+                    );
+                    if (pickedTime != null) {
+                      setState(() {
+                        _dueTime = pickedTime;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time),
+                        const SizedBox(width: 8),
+                        Text(
+                          _dueTime == null
+                              ? 'Select a time'
+                              : _dueTime!.format(context),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 16),
               ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-      ],
               // Due Date (for deadline tasks)
               if (_taskType == TaskType.deadline) ...[
                 const Text('Due Date', style: AppTextStyles.heading3),
@@ -201,7 +201,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Priority (for deadline tasks)
                 const Text('Priority', style: AppTextStyles.heading3),
                 const SizedBox(height: 8),
@@ -215,9 +215,9 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
                   ],
                 ),
               ],
-              
+
               const SizedBox(height: 32),
-              
+
               // Save Button
               SizedBox(
                 width: double.infinity,
@@ -235,7 +235,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       ),
     );
   }
-  
+
   Widget _buildTaskTypeCard({
     required IconData icon,
     required String title,
@@ -288,10 +288,10 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
       ),
     );
   }
-  
+
   Widget _buildPriorityButton(String label, TaskPriority priority) {
     final bool isSelected = _priority == priority;
-    
+
     // Determine color based on priority
     Color priorityColor;
     switch (priority) {
@@ -305,7 +305,7 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         priorityColor = Colors.red;
         break;
     }
-    
+
     return Expanded(
       child: ElevatedButton(
         onPressed: () {

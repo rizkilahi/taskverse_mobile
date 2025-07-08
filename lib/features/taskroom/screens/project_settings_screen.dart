@@ -5,7 +5,6 @@ import '../../../config/themes/app_text_styles.dart';
 import '../../../data/models/project_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/models/thread_model.dart';
-import '../../../data/models/thread_member_model.dart';
 import '../providers/project_provider.dart';
 import '../providers/project_task_provider.dart';
 import '../../thread/providers/thread_provider.dart';
@@ -14,7 +13,7 @@ import '../../taskroom/helpers/thread_integration_help.dart';
 class ProjectSettingsScreen extends StatefulWidget {
   final String projectId;
 
-  const ProjectSettingsScreen({Key? key, required this.projectId}) : super(key: key);
+  const ProjectSettingsScreen({super.key, required this.projectId});
 
   @override
   State<ProjectSettingsScreen> createState() => _ProjectSettingsScreenState();
@@ -31,7 +30,10 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
+      final projectProvider = Provider.of<ProjectProvider>(
+        context,
+        listen: false,
+      );
       setState(() {
         project = projectProvider.getProjectById(widget.projectId);
         if (project != null) {
@@ -148,7 +150,10 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text('Save Changes', style: AppTextStyles.bodyMedium),
+                      child: Text(
+                        'Save Changes',
+                        style: AppTextStyles.bodyMedium,
+                      ),
                     ),
                   SizedBox(height: screenHeight * 0.03),
 
@@ -173,14 +178,21 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text('Add Member', style: AppTextStyles.bodyMedium),
+                      child: Text(
+                        'Add Member',
+                        style: AppTextStyles.bodyMedium,
+                      ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: project!.members.length,
-                      itemBuilder: (context, index) => _buildMemberCard(project!.members[index], screenWidth),
+                      itemBuilder:
+                          (context, index) => _buildMemberCard(
+                            project!.members[index],
+                            screenWidth,
+                          ),
                     ),
                     SizedBox(height: screenHeight * 0.03),
                   ],
@@ -206,28 +218,42 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text('Create Sub-Thread', style: AppTextStyles.bodyMedium),
+                      child: Text(
+                        'Create Sub-Thread',
+                        style: AppTextStyles.bodyMedium,
+                      ),
                     ),
                     SizedBox(height: screenHeight * 0.02),
                   ],
                   Consumer<ThreadProvider>(
                     builder: (context, threadProvider, _) {
-                      final subThreads = threadProvider.getSubThreads(project!.threadId ?? '');
+                      final subThreads = threadProvider.getSubThreads(
+                        project!.threadId ?? '',
+                      );
                       return subThreads.isEmpty
                           ? const Text('No sub-threads available')
                           : ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: subThreads.length,
-                              itemBuilder: (context, index) => _buildThreadCard(subThreads[index], screenWidth),
-                            );
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: subThreads.length,
+                            itemBuilder:
+                                (context, index) => _buildThreadCard(
+                                  subThreads[index],
+                                  screenWidth,
+                                ),
+                          );
                     },
                   ),
                   SizedBox(height: screenHeight * 0.03),
 
                   // Danger Zone
                   if (isAdmin) ...[
-                    Text('Danger Zone', style: AppTextStyles.heading3.copyWith(color: AppColors.error)),
+                    Text(
+                      'Danger Zone',
+                      style: AppTextStyles.heading3.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
                     SizedBox(height: screenHeight * 0.02),
                     ElevatedButton(
                       onPressed: _deleteProject,
@@ -238,7 +264,10 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Text('Delete Project', style: AppTextStyles.bodyMedium),
+                      child: Text(
+                        'Delete Project',
+                        style: AppTextStyles.bodyMedium,
+                      ),
                     ),
                   ],
                 ],
@@ -258,19 +287,30 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
       return;
     }
 
-    final success = await Provider.of<ProjectProvider>(context, listen: false).updateProject(
+    final success = await Provider.of<ProjectProvider>(
+      context,
+      listen: false,
+    ).updateProject(
       widget.projectId,
       name: _nameController.text,
-      description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+      description:
+          _descriptionController.text.isEmpty
+              ? null
+              : _descriptionController.text,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? 'Project updated' : 'Failed to update project')),
+      SnackBar(
+        content: Text(success ? 'Project updated' : 'Failed to update project'),
+      ),
     );
 
     if (success) {
       setState(() {
-        project = Provider.of<ProjectProvider>(context, listen: false).getProjectById(widget.projectId);
+        project = Provider.of<ProjectProvider>(
+          context,
+          listen: false,
+        ).getProjectById(widget.projectId);
       });
     }
   }
@@ -284,27 +324,12 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
       return;
     }
 
-    // Dummy user ID generation (replace with backend lookup)
-    final userId = 'user-${DateTime.now().millisecondsSinceEpoch}';
-    final success = await Provider.of<ProjectProvider>(context, listen: false).addMemberToProject(
-      widget.projectId,
-      userId,
-      ProjectRole.member,
+    // TODO: Replace with actual backend call to get userId by email
+    // For now, show error
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('User lookup by email not implemented')),
     );
-
-    if (success) {
-      _newMemberEmailController.clear();
-      setState(() {
-        project = Provider.of<ProjectProvider>(context, listen: false).getProjectById(widget.projectId);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Member added')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to add member')),
-      );
-    }
+    return;
   }
 
   Future<void> _createSubThread() async {
@@ -329,7 +354,9 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
       action: ThreadAction.write, // Ganti dari 'edit' ke 'write'
     )) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You do not have permission to create threads')),
+        const SnackBar(
+          content: Text('You do not have permission to create threads'),
+        ),
       );
       return;
     }
@@ -339,57 +366,77 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
       parentId: project!.threadId!,
       name: threadName.startsWith('#') ? threadName : '#$threadName',
       description: 'Discussion thread for $threadName',
-      members: project!.members
-          .map((m) => ThreadIntegrationHelper.convertProjectMemberToThreadMember(m))
-          .toList(),
+      members:
+          project!.members
+              .map(
+                (m) =>
+                    ThreadIntegrationHelper.convertProjectMemberToThreadMember(
+                      m,
+                    ),
+              )
+              .toList(),
     );
 
     final subThreads = threadProvider.getSubThreads(project!.threadId!);
-    await Provider.of<ProjectProvider>(context, listen: false).updateProject(
-      widget.projectId,
-      threadCount: subThreads.length,
-    );
+    await Provider.of<ProjectProvider>(
+      context,
+      listen: false,
+    ).updateProject(widget.projectId, threadCount: subThreads.length);
 
     _newThreadNameController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sub-thread created')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Sub-thread created')));
   }
 
   Future<void> _deleteProject() async {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Project'),
-        content: Text('Are you sure you want to delete ${project!.name}? This will also delete all tasks and threads.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final projectTaskProvider = Provider.of<ProjectTaskProvider>(context, listen: false);
-              final tasks = projectTaskProvider.tasks.where((t) => t.projectId == widget.projectId).toList();
-              for (var task in tasks) {
-                await projectTaskProvider.deleteProjectTask(task.id);
-              }
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Project'),
+            content: Text(
+              'Are you sure you want to delete ${project!.name}? This will also delete all tasks and threads.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final projectTaskProvider = Provider.of<ProjectTaskProvider>(
+                    context,
+                    listen: false,
+                  );
+                  final tasks =
+                      projectTaskProvider.tasks
+                          .where((t) => t.projectId == widget.projectId)
+                          .toList();
+                  for (var task in tasks) {
+                    await projectTaskProvider.deleteProjectTask(task.id);
+                  }
 
-              final success = await Provider.of<ProjectProvider>(context, listen: false)
-                  .deleteProject(widget.projectId);
+                  final success = await Provider.of<ProjectProvider>(
+                    context,
+                    listen: false,
+                  ).deleteProject(widget.projectId);
 
-              if (success) {
-                Navigator.pushReplacementNamed(context, '/taskroom');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to delete project')),
-                );
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+                  if (success) {
+                    Navigator.pushReplacementNamed(context, '/taskroom');
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to delete project')),
+                    );
+                  }
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: AppColors.error),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -412,7 +459,6 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontFamily: 'Montserrat',
-              fontSize: screenWidth * 0.035,
             ),
           ),
         ),
@@ -432,27 +478,29 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
             fontSize: screenWidth * 0.03,
           ),
         ),
-        trailing: isAdmin && !isCurrentUser
-            ? PopupMenuButton(
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'change_role',
-                    child: Text('Change Role'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'remove',
-                    child: Text('Remove Member'),
-                  ),
-                ],
-                onSelected: (value) {
-                  if (value == 'change_role') {
-                    _showChangeRoleDialog(member);
-                  } else if (value == 'remove') {
-                    _removeMember(member);
-                  }
-                },
-              )
-            : null,
+        trailing:
+            isAdmin && !isCurrentUser
+                ? PopupMenuButton(
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'change_role',
+                          child: Text('Change Role'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'remove',
+                          child: Text('Remove Member'),
+                        ),
+                      ],
+                  onSelected: (value) {
+                    if (value == 'change_role') {
+                      _showChangeRoleDialog(member);
+                    } else if (value == 'remove') {
+                      _removeMember(member);
+                    }
+                  },
+                )
+                : null,
       ),
     );
   }
@@ -482,27 +530,29 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
             fontSize: screenWidth * 0.03,
           ),
         ),
-        trailing: isAdmin
-            ? PopupMenuButton(
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'rename',
-                    child: Text('Rename Thread'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Delete Thread'),
-                  ),
-                ],
-                onSelected: (value) {
-                  if (value == 'rename') {
-                    _showRenameThreadDialog(thread);
-                  } else if (value == 'delete') {
-                    _deleteThread(thread);
-                  }
-                },
-              )
-            : null,
+        trailing:
+            isAdmin
+                ? PopupMenuButton(
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'rename',
+                          child: Text('Rename Thread'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete Thread'),
+                        ),
+                      ],
+                  onSelected: (value) {
+                    if (value == 'rename') {
+                      _showRenameThreadDialog(thread);
+                    } else if (value == 'delete') {
+                      _deleteThread(thread);
+                    }
+                  },
+                )
+                : null,
       ),
     );
   }
@@ -515,29 +565,39 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
         return AlertDialog(
           title: Text('Change Role for ${member.user.name}'),
           content: StatefulBuilder(
-            builder: (context, setState) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RadioListTile(
-                  title: const Text('Admin'),
-                  value: ProjectRole.admin,
-                  groupValue: selectedRole,
-                  onChanged: (value) => setState(() => selectedRole = value as ProjectRole),
+            builder:
+                (context, setState) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile(
+                      title: const Text('Admin'),
+                      value: ProjectRole.admin,
+                      groupValue: selectedRole,
+                      onChanged:
+                          (value) => setState(
+                            () => selectedRole = value as ProjectRole,
+                          ),
+                    ),
+                    RadioListTile(
+                      title: const Text('Member'),
+                      value: ProjectRole.member,
+                      groupValue: selectedRole,
+                      onChanged:
+                          (value) => setState(
+                            () => selectedRole = value as ProjectRole,
+                          ),
+                    ),
+                    RadioListTile(
+                      title: const Text('Viewer'),
+                      value: ProjectRole.viewer,
+                      groupValue: selectedRole,
+                      onChanged:
+                          (value) => setState(
+                            () => selectedRole = value as ProjectRole,
+                          ),
+                    ),
+                  ],
                 ),
-                RadioListTile(
-                  title: const Text('Member'),
-                  value: ProjectRole.member,
-                  groupValue: selectedRole,
-                  onChanged: (value) => setState(() => selectedRole = value as ProjectRole),
-                ),
-                RadioListTile(
-                  title: const Text('Viewer'),
-                  value: ProjectRole.viewer,
-                  groupValue: selectedRole,
-                  onChanged: (value) => setState(() => selectedRole = value as ProjectRole),
-                ),
-              ],
-            ),
           ),
           actions: [
             TextButton(
@@ -546,37 +606,49 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
             ),
             TextButton(
               onPressed: () async {
-                final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-                
-                final currentProject = projectProvider.getProjectById(widget.projectId);
-                if (currentProject != null) {
-                  final updatedMembers = currentProject.members.map((m) {
-                    if (m.userId == member.userId) {
-                      return m.copyWith(role: selectedRole);
-                    }
-                    return m;
-                  }).toList();
+                final projectProvider = Provider.of<ProjectProvider>(
+                  context,
+                  listen: false,
+                );
 
-                  projectProvider.projects[projectProvider.projects.indexWhere((p) => p.id == widget.projectId)] = currentProject.copyWith(
+                final currentProject = projectProvider.getProjectById(
+                  widget.projectId,
+                );
+                if (currentProject != null) {
+                  final updatedMembers =
+                      currentProject.members.map((m) {
+                        if (m.userId == member.userId) {
+                          return m.copyWith(role: selectedRole);
+                        }
+                        return m;
+                      }).toList();
+
+                  projectProvider.projects[projectProvider.projects.indexWhere(
+                    (p) => p.id == widget.projectId,
+                  )] = currentProject.copyWith(
                     members: updatedMembers,
                     updatedAt: DateTime.now(),
                   );
-                  projectProvider.notifyListeners();
+                  // Remove notifyListeners() call
+                  // projectProvider.notifyListeners();
 
                   await ThreadIntegrationHelper.updateMemberRoleInProjectThreads(
                     projectId: widget.projectId,
                     userId: member.userId,
                     newRole: selectedRole!,
-                    threadProvider: Provider.of<ThreadProvider>(context, listen: false),
+                    threadProvider: Provider.of<ThreadProvider>(
+                      context,
+                      listen: false,
+                    ),
                   );
-                  
+
                   setState(() {
                     project = projectProvider.getProjectById(widget.projectId);
                   });
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Role updated')),
-                  );
+
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Role updated')));
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Failed to update role')),
@@ -595,37 +667,47 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
   void _removeMember(ProjectMember member) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Member'),
-        content: Text('Are you sure you want to remove ${member.user.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Remove Member'),
+            content: Text(
+              'Are you sure you want to remove ${member.user.name}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final success = await Provider.of<ProjectProvider>(
+                    context,
+                    listen: false,
+                  ).removeMemberFromProject(widget.projectId, member.userId);
+                  if (success) {
+                    setState(() {
+                      project = Provider.of<ProjectProvider>(
+                        context,
+                        listen: false,
+                      ).getProjectById(widget.projectId);
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Member removed')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to remove member')),
+                    );
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'Remove',
+                  style: TextStyle(color: AppColors.error),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              final success = await Provider.of<ProjectProvider>(context, listen: false)
-                  .removeMemberFromProject(widget.projectId, member.userId);
-              if (success) {
-                setState(() {
-                  project = Provider.of<ProjectProvider>(context, listen: false)
-                      .getProjectById(widget.projectId);
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Member removed')),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to remove member')),
-                );
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Remove', style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -633,98 +715,128 @@ class _ProjectSettingsScreenState extends State<ProjectSettingsScreen> {
     final renameController = TextEditingController(text: thread.name);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename Thread'),
-        content: TextFormField(
-          controller: renameController,
-          decoration: const InputDecoration(labelText: 'Thread Name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Rename Thread'),
+            content: TextFormField(
+              controller: renameController,
+              decoration: const InputDecoration(labelText: 'Thread Name'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final newName = renameController.text.trim();
+                  if (newName.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Thread name cannot be empty'),
+                      ),
+                    );
+                    return;
+                  }
+                  if (!ThreadIntegrationHelper.hasThreadPermission(
+                    project: project!,
+                    userId: UserModel.currentUser.id,
+                    action: ThreadAction.deleteThread,
+                  )) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'You do not have permission to rename threads',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  final threadProvider = Provider.of<ThreadProvider>(
+                    context,
+                    listen: false,
+                  );
+                  await threadProvider.updateThread(
+                    thread.id,
+                    name: newName.startsWith('#') ? newName : '#$newName',
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Thread renamed')),
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              final newName = renameController.text.trim();
-              if (newName.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Thread name cannot be empty')),
-                );
-                return;
-              }
-              if (!ThreadIntegrationHelper.hasThreadPermission(
-                project: project!,
-                userId: UserModel.currentUser.id,
-                action: ThreadAction.deleteThread,
-              )) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('You do not have permission to rename threads')),
-                );
-                return;
-              }
-              final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
-              await threadProvider.updateThread(
-                thread.id,
-                name: newName.startsWith('#') ? newName : '#$newName',
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Thread renamed')),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
     );
   }
 
   void _deleteThread(ThreadModel thread) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Thread'),
-        content: Text('Are you sure you want to delete ${thread.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Thread'),
+            content: Text('Are you sure you want to delete ${thread.name}?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  if (!ThreadIntegrationHelper.hasThreadPermission(
+                    project: project!,
+                    userId: UserModel.currentUser.id,
+                    action: ThreadAction.deleteThread,
+                  )) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'You do not have permission to delete threads',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  final threadProvider = Provider.of<ThreadProvider>(
+                    context,
+                    listen: false,
+                  );
+                  await threadProvider.deleteThread(thread.id);
+                  final subThreads = threadProvider.getSubThreads(
+                    project!.threadId ?? '',
+                  );
+                  await Provider.of<ProjectProvider>(
+                    context,
+                    listen: false,
+                  ).updateProject(
+                    widget.projectId,
+                    threadCount: subThreads.length,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Thread deleted')),
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: AppColors.error),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              if (!ThreadIntegrationHelper.hasThreadPermission(
-                project: project!,
-                userId: UserModel.currentUser.id,
-                action: ThreadAction.deleteThread,
-              )) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('You do not have permission to delete threads')),
-                );
-                return;
-              }
-              final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
-              await threadProvider.deleteThread(thread.id);
-              final subThreads = threadProvider.getSubThreads(project!.threadId ?? '');
-              await Provider.of<ProjectProvider>(context, listen: false).updateProject(
-                widget.projectId,
-                threadCount: subThreads.length,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Thread deleted')),
-              );
-              Navigator.pop(context);
-            },
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
     );
   }
 }
 
 extension ThreadProviderExtensions on ThreadProvider {
-  Future<void> updateThread(String threadId, {String? name, String? description}) async {
+  Future<void> updateThread(
+    String threadId, {
+    String? name,
+    String? description,
+  }) async {
     final threadIndex = threads.indexWhere((t) => t.id == threadId);
     if (threadIndex == -1) return;
 

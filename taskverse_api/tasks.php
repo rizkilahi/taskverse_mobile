@@ -15,8 +15,9 @@ try {
 
     $method = $_SERVER['REQUEST_METHOD'];
 
-    // Handle preflight
-    if ($method == 'OPTIONS') { exit; }
+    if ($method == 'OPTIONS') {
+        exit;
+    }
 
     // GET: List all tasks or get by id
     if ($method == 'GET') {
@@ -40,51 +41,51 @@ try {
             $data['id'],
             $data['title'],
             $data['description'] ?? null,
-            $data['dueDate'] ?? null,
-            $data['dueTime'] ?? null,
-            $data['isCompleted'] ?? 0,
+            $data['due_date'] ?? null,
+            $data['due_time'] ?? null,
+            $data['is_completed'] ?? 0,
             $data['type'],
             $data['priority'] ?? null,
             $data['streak'] ?? 0,
-            $data['lastCompleted'] ?? null,
-            $data['projectId'] ?? null
+            $data['last_completed'] ?? null,
+            $data['project_id'] ?? null
         ]);
-        echo json_encode(['status' => 'success']);
+        echo json_encode(['success' => true]);
         exit;
     }
 
     // PUT: Update task
     if ($method == 'PUT') {
-        parse_str(file_get_contents("php://input"), $data);
+        $data = json_decode(file_get_contents("php://input"), true);
         $stmt = $conn->prepare("UPDATE tasks SET title=?, description=?, due_date=?, due_time=?, is_completed=?, type=?, priority=?, streak=?, last_completed=?, project_id=? WHERE id=?");
         $stmt->execute([
             $data['title'],
             $data['description'] ?? null,
-            $data['dueDate'] ?? null,
-            $data['dueTime'] ?? null,
-            $data['isCompleted'] ?? 0,
+            $data['due_date'] ?? null,
+            $data['due_time'] ?? null,
+            $data['is_completed'] ?? 0,
             $data['type'],
             $data['priority'] ?? null,
             $data['streak'] ?? 0,
-            $data['lastCompleted'] ?? null,
-            $data['projectId'] ?? null,
+            $data['last_completed'] ?? null,
+            $data['project_id'] ?? null,
             $data['id']
         ]);
-        echo json_encode(['status' => 'success']);
+        echo json_encode(['success' => true]);
         exit;
     }
 
     // DELETE: Delete task
     if ($method == 'DELETE') {
-        parse_str(file_get_contents("php://input"), $data);
+        $data = json_decode(file_get_contents("php://input"), true);
         $stmt = $conn->prepare("DELETE FROM tasks WHERE id=?");
         $stmt->execute([$data['id']]);
-        echo json_encode(['status' => 'success']);
+        echo json_encode(['success' => true]);
         exit;
     }
 
-    echo json_encode(['status' => 'error', 'message' => 'Invalid request']);
+    echo json_encode(['success' => false, 'message' => 'Invalid request']);
 } catch (PDOException $e) {
-    echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

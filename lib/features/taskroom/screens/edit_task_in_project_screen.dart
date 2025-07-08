@@ -13,7 +13,8 @@ class EditTaskInProjectScreen extends StatefulWidget {
   const EditTaskInProjectScreen({super.key});
 
   @override
-  _EditTaskInProjectScreenState createState() => _EditTaskInProjectScreenState();
+  _EditTaskInProjectScreenState createState() =>
+      _EditTaskInProjectScreenState();
 }
 
 class _EditTaskInProjectScreenState extends State<EditTaskInProjectScreen> {
@@ -61,28 +62,32 @@ class _EditTaskInProjectScreenState extends State<EditTaskInProjectScreen> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate() && _dueDate != null) {
       final provider = Provider.of<ProjectTaskProvider>(context, listen: false);
-      await provider.updateProjectTask(
+      final success = await provider.updateProjectTask(
         _task.id,
         title: _titleController.text,
-        description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+        description:
+            _descriptionController.text.isNotEmpty
+                ? _descriptionController.text
+                : null,
         dueDate: _dueDate,
         assigneeIds: _assigneeIds,
       );
-
-      if (provider.loadingState == ProjectTaskLoadingState.success) {
+      if (success == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Task updated successfully')),
         );
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.errorMessage ?? 'Failed to update task')),
+          SnackBar(
+            content: Text(provider.errorMessage ?? 'Failed to update task'),
+          ),
         );
       }
     } else if (_dueDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a due date')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a due date')));
     }
   }
 
@@ -115,7 +120,8 @@ class _EditTaskInProjectScreenState extends State<EditTaskInProjectScreen> {
                   labelText: 'Title',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => value!.isEmpty ? 'Title is required' : null,
+                validator:
+                    (value) => value!.isEmpty ? 'Title is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(

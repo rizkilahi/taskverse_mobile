@@ -7,7 +7,7 @@ import '../../../data/models/user_model.dart';
 import '../providers/project_provider.dart';
 
 class CreateProjectScreen extends StatefulWidget {
-  const CreateProjectScreen({Key? key}) : super(key: key);
+  const CreateProjectScreen({super.key});
 
   @override
   State<CreateProjectScreen> createState() => _CreateProjectScreenState();
@@ -17,29 +17,29 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   final Map<String, bool> _selectedMembers = {};
   final Map<String, ProjectRole> _memberRoles = {};
-  
+
   bool _isCreating = false;
 
-  // Dummy users available for selection
-  // TODO: Fetch from backend API
-  final List<UserModel> _availableUsers = [
-    UserModel(id: '2', name: 'King', email: 'king@example.com'),
-    UserModel(id: '3', name: 'Alice', email: 'alice@example.com'),
-    UserModel(id: '4', name: 'Bob', email: 'bob@example.com'),
-    UserModel(id: '5', name: 'Charlie', email: 'charlie@example.com'),
-    UserModel(id: '6', name: 'Diana', email: 'diana@example.com'),
-  ];
+  List<UserModel> _availableUsers = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize member selection with default roles
-    for (final user in _availableUsers) {
-      _selectedMembers[user.id] = false;
-      _memberRoles[user.id] = ProjectRole.member;
+    _fetchAvailableUsers();
+  }
+
+  Future<void> _fetchAvailableUsers() async {
+    try {
+      // TODO: Replace with actual backend call or use correct provider method
+      // For now, set _availableUsers to empty or fetch from a UserProvider if available
+      setState(() {
+        _availableUsers = [];
+      });
+    } catch (e) {
+      // Handle error (show snackbar, etc)
     }
   }
 
@@ -89,9 +89,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Project Name
                   const Text('Project Name *', style: AppTextStyles.heading3),
                   const SizedBox(height: 8),
@@ -112,11 +112,14 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Project Description
-                  const Text('Description (Optional)', style: AppTextStyles.heading3),
+                  const Text(
+                    'Description (Optional)',
+                    style: AppTextStyles.heading3,
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _descriptionController,
@@ -127,16 +130,19 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                     ),
                     maxLines: 3,
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Team Members Section
                   Row(
                     children: [
                       const Text('Team Members', style: AppTextStyles.heading3),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.secondary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -153,7 +159,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  
+
                   // Current user (auto-included as admin)
                   Card(
                     child: ListTile(
@@ -167,7 +173,10 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       title: Text('${UserModel.currentUser.name} (You)'),
                       subtitle: Text(UserModel.currentUser.email),
                       trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(16),
@@ -183,13 +192,16 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Available team members
-                  const Text('Add Team Members:', style: AppTextStyles.bodyLarge),
+                  const Text(
+                    'Add Team Members:',
+                    style: AppTextStyles.bodyLarge,
+                  ),
                   const SizedBox(height: 8),
-                  
+
                   // Members list
                   ListView.builder(
                     shrinkWrap: true,
@@ -198,8 +210,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                     itemBuilder: (context, index) {
                       final user = _availableUsers[index];
                       final isSelected = _selectedMembers[user.id] ?? false;
-                      final currentRole = _memberRoles[user.id] ?? ProjectRole.member;
-                      
+                      final currentRole =
+                          _memberRoles[user.id] ?? ProjectRole.member;
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: Column(
@@ -212,7 +225,10 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                                 });
                               },
                               secondary: CircleAvatar(
-                                backgroundColor: isSelected ? AppColors.primary : Colors.grey,
+                                backgroundColor:
+                                    isSelected
+                                        ? AppColors.primary
+                                        : Colors.grey,
                                 child: Text(
                                   user.name[0].toUpperCase(),
                                   style: const TextStyle(color: Colors.white),
@@ -225,41 +241,55 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                             // Role selector (only visible when selected)
                             if (isSelected)
                               Padding(
-                                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  right: 16,
+                                  bottom: 8,
+                                ),
                                 child: Row(
                                   children: [
-                                    const Text('Role: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    const Text(
+                                      'Role: ',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: DropdownButtonFormField<ProjectRole>(
-                                        value: currentRole,
-                                        decoration: const InputDecoration(
-                                          isDense: true,
-                                          border: OutlineInputBorder(),
-                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        ),
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: ProjectRole.member,
-                                            child: Text('Member'),
+                                      child:
+                                          DropdownButtonFormField<ProjectRole>(
+                                            value: currentRole,
+                                            decoration: const InputDecoration(
+                                              isDense: true,
+                                              border: OutlineInputBorder(),
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 8,
+                                                  ),
+                                            ),
+                                            items: const [
+                                              DropdownMenuItem(
+                                                value: ProjectRole.member,
+                                                child: Text('Member'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: ProjectRole.admin,
+                                                child: Text('Admin'),
+                                              ),
+                                              DropdownMenuItem(
+                                                value: ProjectRole.viewer,
+                                                child: Text('Viewer'),
+                                              ),
+                                            ],
+                                            onChanged: (value) {
+                                              if (value != null) {
+                                                setState(() {
+                                                  _memberRoles[user.id] = value;
+                                                });
+                                              }
+                                            },
                                           ),
-                                          DropdownMenuItem(
-                                            value: ProjectRole.admin,
-                                            child: Text('Admin'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: ProjectRole.viewer,
-                                            child: Text('Viewer'),
-                                          ),
-                                        ],
-                                        onChanged: (value) {
-                                          if (value != null) {
-                                            setState(() {
-                                              _memberRoles[user.id] = value;
-                                            });
-                                          }
-                                        },
-                                      ),
                                     ),
                                   ],
                                 ),
@@ -269,9 +299,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       );
                     },
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Validation info
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -282,7 +312,11 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                        const Icon(
+                          Icons.info_outline,
+                          color: Colors.blue,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
@@ -290,14 +324,20 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                             children: [
                               const Text(
                                 'Project Creation Info:',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '• A project thread will be automatically created\n'
                                 '• All members will have access to the project thread\n'
                                 '• You can manage members and permissions later',
-                                style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue[700],
+                                ),
                               ),
                             ],
                           ),
@@ -305,47 +345,49 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Create Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isCreating || projectProvider.isLoading 
-                          ? null 
-                          : _createProject,
+                      onPressed:
+                          _isCreating || projectProvider.isLoading
+                              ? null
+                              : _createProject,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                       ),
-                      child: _isCreating || projectProvider.isLoading
-                          ? const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
+                      child:
+                          _isCreating || projectProvider.isLoading
+                              ? const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
                                   ),
+                                  SizedBox(width: 12),
+                                  Text('Creating Project...'),
+                                ],
+                              )
+                              : const Text(
+                                'Create Project Room',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                SizedBox(width: 12),
-                                Text('Creating Project...'),
-                              ],
-                            )
-                          : const Text(
-                              'Create Project Room',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
                               ),
-                            ),
                     ),
                   ),
-                  
+
                   // Error message
                   if (projectProvider.errorMessage != null) ...[
                     const SizedBox(height: 16),
@@ -358,7 +400,11 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -381,57 +427,64 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
   void _createProject() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Validate minimum members requirement
-    final selectedMemberIds = _selectedMembers.entries
-        .where((entry) => entry.value)
-        .map((entry) => entry.key)
-        .toList();
-    
+    final selectedMemberIds =
+        _selectedMembers.entries
+            .where((entry) => entry.value)
+            .map((entry) => entry.key)
+            .toList();
+
     // Total members = current user + selected members
     final totalMembers = selectedMemberIds.length + 1; // +1 for current user
-    
+
     if (totalMembers < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select at least 1 team member (minimum 2 members total)'),
+          content: Text(
+            'Please select at least 1 team member (minimum 2 members total)',
+          ),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
-    
+
     setState(() {
       _isCreating = true;
     });
-    
+
     try {
-      final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-      
+      final projectProvider = Provider.of<ProjectProvider>(
+        context,
+        listen: false,
+      );
+
       // Prepare member roles (only for selected members)
       final memberRoles = <String, ProjectRole>{};
       for (final memberId in selectedMemberIds) {
         memberRoles[memberId] = _memberRoles[memberId] ?? ProjectRole.member;
       }
-      
+
       // Add current user as admin
       memberRoles[UserModel.currentUser.id] = ProjectRole.admin;
-      
+
       final request = CreateProjectRequest(
         name: _nameController.text.trim(),
-        description: _descriptionController.text.trim().isEmpty 
-            ? null 
-            : _descriptionController.text.trim(),
+        description:
+            _descriptionController.text.trim().isEmpty
+                ? null
+                : _descriptionController.text.trim(),
         memberIds: [UserModel.currentUser.id, ...selectedMemberIds],
         memberRoles: memberRoles,
       );
-      
+
       final newProject = await projectProvider.createProject(request);
-      
+
       if (newProject != null) {
         // Clear any previous errors
         projectProvider.clearError();
-        
+
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -447,7 +500,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
             ),
           ),
         );
-        
+
         // Navigate back to taskroom
         Navigator.pop(context);
       }
@@ -465,9 +518,5 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         });
       }
     }
-  }
-  
-  int get _selectedMembersCount {
-    return _selectedMembers.values.where((selected) => selected).length;
   }
 }

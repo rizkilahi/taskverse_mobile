@@ -1,4 +1,20 @@
 {
   "java.configuration.updateBuildConfiguration": "interactive",
-  "cmake.sourceDirectory": "E:/Programing/Flutter/taskverse_mobile/linux"
+  "cmake.sourceDirectory": "E:/Programing/Flutter/taskverse_mobile/linux",
+  "sqltools.connections": [
+    {
+      "mysqlOptions": {
+        "authProtocol": "default",
+        "enableSsl": "Disabled"
+      },
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 3306,
+      "driver": "MySQL",
+      "name": "Task Verse",
+      "database": "taskverse_db",
+      "username": "root",
+      "password": ""
+    }
+  ]
 }

@@ -4,7 +4,6 @@ import '../../../config/themes/app_colors.dart';
 import '../../../config/themes/app_text_styles.dart';
 import '../../../data/models/user_model.dart';
 import '../providers/project_provider.dart';
-import '../../../data/models/project_task_model.dart';
 
 class ProjectTaskCard extends StatelessWidget {
   const ProjectTaskCard({super.key});

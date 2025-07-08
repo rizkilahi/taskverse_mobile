@@ -7,21 +7,17 @@ import '../../../data/models/project_task_model.dart';
 import '../../../data/models/user_model.dart';
 import '../providers/project_provider.dart';
 import '../providers/project_task_provider.dart';
-import '../../thread/providers/thread_provider.dart';
 import '../widgets/project_task_card_task.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
-import '../../thread/screens/thread_screen.dart';
 import '../helpers/thread_integration_help.dart';
+import '../../thread/providers/thread_provider.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
-  
-  const ProjectDetailScreen({
-    Key? key,
-    required this.projectId,
-  }) : super(key: key);
 
-    @override
+  const ProjectDetailScreen({super.key, required this.projectId});
+
+  @override
   State<ProjectDetailScreen> createState() {
     if (projectId.isEmpty) {
       print('❌ ProjectDetailScreen: Empty projectId provided to constructor');
@@ -30,47 +26,54 @@ class ProjectDetailScreen extends StatefulWidget {
   }
 }
 
-
-class _ProjectDetailScreenState extends State<ProjectDetailScreen> with SingleTickerProviderStateMixin {
+class _ProjectDetailScreenState extends State<ProjectDetailScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   ProjectModel? project;
 
   @override
-void initState() {
-  super.initState();
-  _tabController = TabController(length: 3, vsync: this);
-  
-  // PERBAIKAN: Validasi projectId sebelum dipanggil
-  if (widget.projectId.isEmpty) {
-    print('❌ ProjectDetailScreen: Empty projectId received in initState');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-      Navigator.pushReplacementNamed(context, '/taskroom');
-    }
-    });
-    return;
-  }
-  
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-     if (!mounted) return;
-    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-    final foundProject = projectProvider.getProjectById(widget.projectId);
-    
-    if (foundProject != null) {
-      setState(() {
-        project = foundProject;
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+
+    // PERBAIKAN: Validasi projectId sebelum dipanggil
+    if (widget.projectId.isEmpty) {
+      print('❌ ProjectDetailScreen: Empty projectId received in initState');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/taskroom');
+        }
       });
-      // Fetch project tasks
-      Provider.of<ProjectTaskProvider>(context, listen: false)
-          .fetchTasksByProjectId(widget.projectId);
-    } else {
-      print('❌ ProjectDetailScreen: Project with ID "${widget.projectId}" not found');
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/taskroom');
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final projectProvider = Provider.of<ProjectProvider>(
+        context,
+        listen: false,
+      );
+      final foundProject = projectProvider.getProjectById(widget.projectId);
+
+      if (foundProject != null) {
+        setState(() {
+          project = foundProject;
+        });
+        // Fetch project tasks
+        Provider.of<ProjectTaskProvider>(
+          context,
+          listen: false,
+        ).fetchTasksByProjectId(widget.projectId);
+      } else {
+        print(
+          '❌ ProjectDetailScreen: Project with ID "${widget.projectId}" not found',
+        );
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/taskroom');
+        }
       }
+    });
   }
- });
-}
 
   @override
   void dispose() {
@@ -95,7 +98,8 @@ void initState() {
           ),
         ),
         body: const EmptyStateWidget(
-          message: 'Project not found\nTry creating a new project to get started',
+          message:
+              'Project not found\nTry creating a new project to get started',
           icon: Icons.error_outline,
         ),
       );
@@ -115,17 +119,16 @@ void initState() {
               flexibleSpace: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
                   final double top = constraints.biggest.height;
-                  final bool isCollapsed = top <= kToolbarHeight + MediaQuery.of(context).padding.top;
+                  final bool isCollapsed =
+                      top <=
+                      kToolbarHeight + MediaQuery.of(context).padding.top;
 
                   return Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          AppColors.primary,
-                          AppColors.secondary,
-                        ],
+                        colors: [AppColors.primary, AppColors.secondary],
                       ),
                     ),
                     child: SafeArea(
@@ -139,12 +142,20 @@ void initState() {
                         ),
                         child: Row(
                           crossAxisAlignment:
-                              isCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.end,
+                              isCollapsed
+                                  ? CrossAxisAlignment.center
+                                  : CrossAxisAlignment.end,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                              ),
                               onPressed: () {
-                                Navigator.pushReplacementNamed(context, '/taskroom');
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/taskroom',
+                                );
                               },
                             ),
                             const SizedBox(width: 8),
@@ -153,7 +164,8 @@ void initState() {
                                 duration: const Duration(milliseconds: 200),
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: isCollapsed ? 20 : screenWidth * 0.06,
+                                  fontSize:
+                                      isCollapsed ? 20 : screenWidth * 0.06,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Montserrat',
                                 ),
@@ -179,10 +191,7 @@ void initState() {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.primary,
-                        AppColors.secondary,
-                      ],
+                      colors: [AppColors.primary, AppColors.secondary],
                     ),
                   ),
                   child: TabBar(
@@ -190,8 +199,12 @@ void initState() {
                     indicatorColor: Colors.white,
                     labelColor: Colors.white,
                     unselectedLabelColor: Colors.white70,
-                    labelStyle: AppTextStyles.bodyMedium.copyWith(fontFamily: 'Montserrat'),
-                    unselectedLabelStyle: AppTextStyles.bodySmall.copyWith(fontFamily: 'Montserrat'),
+                    labelStyle: AppTextStyles.bodyMedium.copyWith(
+                      fontFamily: 'Montserrat',
+                    ),
+                    unselectedLabelStyle: AppTextStyles.bodySmall.copyWith(
+                      fontFamily: 'Montserrat',
+                    ),
                     indicatorWeight: 3,
                     tabs: const [
                       Tab(text: 'Overview'),
@@ -280,11 +293,16 @@ void initState() {
                   title: 'Add Task',
                   subtitle: 'Create new project task',
                   onTap: () {
-                    Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
-                        .then((result) {
+                    Navigator.pushNamed(
+                      context,
+                      '/create-task-in-project',
+                      arguments: project!.id,
+                    ).then((result) {
                       if (result == true) {
-                        Provider.of<ProjectTaskProvider>(context, listen: false)
-                            .fetchTasksByProjectId(project!.id);
+                        Provider.of<ProjectTaskProvider>(
+                          context,
+                          listen: false,
+                        ).fetchTasksByProjectId(project!.id);
                       }
                     });
                   },
@@ -337,18 +355,26 @@ void initState() {
                   const Spacer(),
                   ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
-                          .then((result) {
+                      Navigator.pushNamed(
+                        context,
+                        '/create-task-in-project',
+                        arguments: project!.id,
+                      ).then((result) {
                         if (result == true) {
-                         Provider.of<ProjectTaskProvider>(context, listen: false)
-                            .fetchTasksByProjectId(project!.id);
-                      }
+                          Provider.of<ProjectTaskProvider>(
+                            context,
+                            listen: false,
+                          ).fetchTasksByProjectId(project!.id);
+                        }
                       });
                     },
                     icon: Icon(Icons.add, size: screenWidth * 0.045),
                     label: Text(
                       'Add Task',
-                      style: TextStyle(fontSize: screenWidth * 0.035, fontFamily: 'Montserrat'),
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.035,
+                        fontFamily: 'Montserrat',
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -366,22 +392,29 @@ void initState() {
               ),
             ),
             Expanded(
-              child: tasks.isNotEmpty
-                  ? _buildProjectTasksList(tasks, screenWidth)
-                  : EmptyStateWidget(
-                      message: 'Oops, still echoing silence...\nCreate a task to get started!',
-                      icon: Icons.task_alt,
-                      actionText: 'Add Task',
-                      onAction: () {
-                        Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
-                            .then((result) {
-                          if (result == true) {
-                            Provider.of<ProjectTaskProvider>(context, listen: false)
-                            .fetchTasksByProjectId(project!.id);
-                          }
-                        });
-                      },
-                    ),
+              child:
+                  tasks.isNotEmpty
+                      ? _buildProjectTasksList(tasks, screenWidth)
+                      : EmptyStateWidget(
+                        message:
+                            'Oops, still echoing silence...\nCreate a task to get started!',
+                        icon: Icons.task_alt,
+                        actionText: 'Add Task',
+                        onAction: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/create-task-in-project',
+                            arguments: project!.id,
+                          ).then((result) {
+                            if (result == true) {
+                              Provider.of<ProjectTaskProvider>(
+                                context,
+                                listen: false,
+                              ).fetchTasksByProjectId(project!.id);
+                            }
+                          });
+                        },
+                      ),
             ),
           ],
         );
@@ -413,7 +446,10 @@ void initState() {
                   icon: Icon(Icons.person_add, size: screenWidth * 0.045),
                   label: Text(
                     'Add Member',
-                    style: TextStyle(fontSize: screenWidth * 0.035, fontFamily: 'Montserrat'),
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.035,
+                      fontFamily: 'Montserrat',
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -464,10 +500,7 @@ void initState() {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              emoji,
-              style: TextStyle(fontSize: screenWidth * 0.08),
-            ),
+            Text(emoji, style: TextStyle(fontSize: screenWidth * 0.08)),
             SizedBox(height: screenWidth * 0.02),
             Text(
               title,
@@ -500,64 +533,19 @@ void initState() {
   }
 
   Widget _buildActivityList(double screenWidth) {
-    final activities = [
-      {'user': 'King', 'action': 'added a new task "UI Design"', 'time': '2h ago'},
-      {'user': 'Alice', 'action': 'completed task "Research Phase"', 'time': '4h ago'},
-      {'user': 'You', 'action': 'updated project description', 'time': '1d ago'},
-    ];
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: activities.length,
-      itemBuilder: (context, index) {
-        final activity = activities[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: AppColors.secondary.withOpacity(0.5),
-            radius: screenWidth * 0.05,
-            child: Text(
-              activity['user']![0],
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Montserrat',
-                fontSize: screenWidth * 0.035,
-              ),
-            ),
-          ),
-          title: RichText(
-            text: TextSpan(
-              style: AppTextStyles.bodyMedium.copyWith(
-                fontFamily: 'Montserrat',
-                fontSize: screenWidth * 0.035,
-              ),
-              children: [
-                TextSpan(
-                  text: activity['user'],
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                TextSpan(text: ' ${activity['action']}'),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Text(
-            activity['time']!,
-            style: AppTextStyles.bodySmall.copyWith(
-              fontFamily: 'Montserrat',
-              fontSize: screenWidth * 0.03,
-            ),
-          ),
-        );
-      },
-    );
+    // TODO: Replace with backend activities or remove this section if not needed
+    return const Text('No recent activity');
   }
 
-  Widget _buildProjectTasksList(List<ProjectTaskModel> tasks, double screenWidth) {
+  Widget _buildProjectTasksList(
+    List<ProjectTaskModel> tasks,
+    double screenWidth,
+  ) {
     return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenWidth * 0.02),
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.04,
+        vertical: screenWidth * 0.02,
+      ),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         return Padding(
@@ -571,7 +559,7 @@ void initState() {
   Widget _buildMemberCard(ProjectMember member, double screenWidth) {
     final isCurrentUser = member.userId == UserModel.currentUser.id;
     final canManageMembers = project!.isUserAdmin(UserModel.currentUser.id);
-    
+
     return Card(
       margin: EdgeInsets.only(bottom: screenWidth * 0.02),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -608,7 +596,10 @@ void initState() {
             if (isCurrentUser) ...[
               SizedBox(width: screenWidth * 0.02),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.015, vertical: screenWidth * 0.005),
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.015,
+                  vertical: screenWidth * 0.005,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -640,7 +631,10 @@ void initState() {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: screenWidth * 0.01),
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.02,
+                vertical: screenWidth * 0.01,
+              ),
               decoration: BoxDecoration(
                 color: _getRoleColor(member.role).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -657,16 +651,17 @@ void initState() {
             ),
             if (canManageMembers && !isCurrentUser)
               PopupMenuButton(
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'change_role',
-                    child: Text('Change Role'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'remove',
-                    child: Text('Remove Member'),
-                  ),
-                ],
+                itemBuilder:
+                    (context) => [
+                      const PopupMenuItem(
+                        value: 'change_role',
+                        child: Text('Change Role'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'remove',
+                        child: Text('Remove Member'),
+                      ),
+                    ],
                 onSelected: (value) {
                   if (value == 'remove') {
                     _removeMember(member);
@@ -697,169 +692,192 @@ void initState() {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Container(
-        padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Text('💬', style: TextStyle(fontSize: 24)),
-              title: const Text('Open Project Thread'),
-              onTap: () {
-                Navigator.pop(context);
-                _openProjectThread();
-              },
+      builder:
+          (context) => Container(
+            padding: EdgeInsets.all(MediaQuery.of(context).size.width * 0.04),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Text('💬', style: TextStyle(fontSize: 24)),
+                  title: const Text('Open Project Thread'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _openProjectThread();
+                  },
+                ),
+                ListTile(
+                  leading: const Text('📋', style: TextStyle(fontSize: 24)),
+                  title: const Text('Add Project Task'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(
+                      context,
+                      '/create-task-in-project',
+                      arguments: project!.id,
+                    ).then((result) {
+                      if (result == true) {
+                        Provider.of<ProjectTaskProvider>(
+                          context,
+                          listen: false,
+                        ).fetchTasksByProjectId(project!.id);
+                      }
+                    });
+                  },
+                ),
+                if (project!.isUserAdmin(UserModel.currentUser.id)) ...[
+                  ListTile(
+                    leading: const Icon(Icons.settings),
+                    title: const Text('Project Settings'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(
+                        context,
+                        '/project-settings',
+                        arguments: project!.id,
+                      );
+                    },
+                  ),
+                ],
+              ],
             ),
-            ListTile(
-              leading: const Text('📋', style: TextStyle(fontSize: 24)),
-              title: const Text('Add Project Task'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/create-task-in-project', arguments: project!.id)
-                    .then((result) {
-                  if (result == true) {
-                    Provider.of<ProjectTaskProvider>(context, listen: false)
-                        .fetchTasksByProjectId(project!.id);
-                  }
-                });
-              },
-            ),
-            if (project!.isUserAdmin(UserModel.currentUser.id)) ...[
-              ListTile(
-                leading: const Icon(Icons.settings),
-                title: const Text('Project Settings'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/project-settings', arguments: project!.id);
-                },
-              ),
-            ],
-          ],
-        ),
-      ),
+          ),
     );
   }
 
   Future<void> _openProjectThread() async {
-  final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
-  final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-
-  print('🔍 ProjectDetailScreen: Checking thread for project ${project!.id}...');
-  print('🔍 ProjectDetailScreen: Current project.threadId: ${project!.threadId}');
-
-  // Kalau threadId null, bikin thread baru
-  if (project!.threadId == null || project!.threadId!.isEmpty) {
-    print('🔧 ProjectDetailScreen: threadId is null or empty, creating new thread...');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Creating project thread...')),
-    );
-    final newThread = await ThreadIntegrationHelper.createProjectThread(
-      project: project!,
-      threadProvider: threadProvider,
-    );
-    print('✅ ProjectDetailScreen: New thread created with ID: ${newThread.id}');
-
-    // Update project dengan threadId yang baru
-    await projectProvider.updateProject(
-      project!.id,
-      threadId: newThread.id,
-      threadCount: (project!.threadCount ?? 0) + 1,
-    );
-
-    // Refresh project data
-    setState(() {
-      project = projectProvider.getProjectById(widget.projectId);
-    });
-    print('🔍 ProjectDetailScreen: Updated project.threadId: ${project!.threadId}');
-  }
-
-  // Validasi threadId
-  if (project!.threadId == null || project!.threadId!.isEmpty) {
-    print('❌ ProjectDetailScreen: Failed to set threadId for project ${project!.id}');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Failed to create project thread')),
-    );
-    return;
-  }
-
-  // Pastiin thread ada di ThreadProvider
-  final mainThreadExists = threadProvider.threads.any((thread) => thread.id == project!.threadId);
-  if (!mainThreadExists) {
-    print('❌ ProjectDetailScreen: Main thread with ID ${project!.threadId} not found in ThreadProvider');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Project thread not found')),
-    );
-    return;
-  }
-
-  // Cari sub-thread dari project thread - PERBAIKAN UTAMA
-  print('🔍 ProjectDetailScreen: Fetching sub-threads for threadId: ${project!.threadId}');
-  final subThreads = threadProvider.getSubThreads(project!.threadId!);
-  print('🔍 ProjectDetailScreen: Found ${subThreads.length} sub-threads: ${subThreads.map((t) => t.name).toList()}');
-
-  // PERBAIKAN: Gunakan logika yang sama dengan ThreadAreaWidget
-  late dynamic targetSubThread;
-  
-  if (subThreads.isNotEmpty) {
-    // Cari #general dulu
-    final generalSubThread = subThreads.where((t) => t.name.toLowerCase() == '#general').firstOrNull;
-    
-    if (generalSubThread != null) {
-      targetSubThread = generalSubThread;
-      print('🔍 ProjectDetailScreen: Found #general sub-thread: ${targetSubThread.id}');
-    } else {
-      // Kalau #general gak ada, ambil sub-thread pertama
-      targetSubThread = subThreads.first;
-      print('🔍 ProjectDetailScreen: #general not found, using first sub-thread: ${targetSubThread.name} (${targetSubThread.id})');
-    }
-  } else {
-    // Kalau gak ada sub-threads sama sekali, fallback ke main thread
-    print('⚠️ ProjectDetailScreen: No sub-threads found, falling back to main thread');
-    targetSubThread = threadProvider.threads.firstWhere((thread) => thread.id == project!.threadId!);
-  }
-
-  print('🔍 ProjectDetailScreen: Selected thread to open: ${targetSubThread.name} (ID: ${targetSubThread.id})');
-
-  // Select thread - PERBAIKAN: pastikan select thread yang benar
-  threadProvider.selectThread(targetSubThread.id);
-
-  // PERBAIKAN: Gunakan navigasi yang konsisten dengan ThreadAreaWidget
-  final currentRoute = ModalRoute.of(context)?.settings.name;
-  print('🔍 ProjectDetailScreen: Current route: $currentRoute');
-  
-  if (currentRoute == '/thread') {
-    print('🔧 ProjectDetailScreen: Already on ThreadScreen, popping until ThreadScreen');
-    Navigator.popUntil(context, (route) => route.settings.name == '/thread');
-  } else {
-    print('🔧 ProjectDetailScreen: Pushing to ThreadScreen with arguments: ${targetSubThread.id}');
-    Navigator.pushNamed(context, '/thread', arguments: targetSubThread.id);
-  }
-}
-
-  void _createTaskAndThread() async {
-    final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
     final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
+    final projectProvider = Provider.of<ProjectProvider>(
+      context,
+      listen: false,
+    );
 
-    if (project!.threadId == null) {
-      final threadId = 'project-${project!.id}';
-      await threadProvider.createHQThread(
-        name: ThreadIntegrationHelper.formatProjectThreadName(project!.name),
-        description: 'Discussion for ${project!.name}',
-        members: project!.members
-            .map((m) => ThreadIntegrationHelper.convertProjectMemberToThreadMember(m))
-            .toList(),
-        customSubThreads: ['general', 'tasks', 'updates'],
+    print(
+      '🔍 ProjectDetailScreen: Checking thread for project ${project!.id}...',
+    );
+    print(
+      '🔍 ProjectDetailScreen: Current project.threadId: ${project!.threadId}',
+    );
+
+    // Kalau threadId null, bikin thread baru
+    if (project!.threadId == null || project!.threadId!.isEmpty) {
+      print(
+        '🔧 ProjectDetailScreen: threadId is null or empty, creating new thread...',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Creating project thread...')),
+      );
+      final newThread = await ThreadIntegrationHelper.createProjectThread(
+        project: project!,
+        threadProvider: threadProvider,
+      );
+      print(
+        '✅ ProjectDetailScreen: New thread created with ID: ${newThread.id}',
       );
 
-      projectProvider.updateProject(
+      // Update project dengan threadId yang baru
+      await projectProvider.updateProject(
         project!.id,
-        threadId: threadId,
-        threadCount: (project!.threadCount ?? 0) + 1,
+        threadId: newThread.id,
+        threadCount: project!.threadCount + 1,
       );
 
+      // Refresh project data
       setState(() {
         project = projectProvider.getProjectById(widget.projectId);
       });
+      print(
+        '🔍 ProjectDetailScreen: Updated project.threadId: ${project!.threadId}',
+      );
+    }
+
+    // Validasi threadId
+    if (project!.threadId == null || project!.threadId!.isEmpty) {
+      print(
+        '❌ ProjectDetailScreen: Failed to set threadId for project ${project!.id}',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to create project thread')),
+      );
+      return;
+    }
+
+    // Pastiin thread ada di ThreadProvider
+    final mainThreadExists = threadProvider.threads.any(
+      (thread) => thread.id == project!.threadId,
+    );
+    if (!mainThreadExists) {
+      print(
+        '❌ ProjectDetailScreen: Main thread with ID ${project!.threadId} not found in ThreadProvider',
+      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Project thread not found')));
+      return;
+    }
+
+    // Cari sub-thread dari project thread - PERBAIKAN UTAMA
+    print(
+      '🔍 ProjectDetailScreen: Fetching sub-threads for threadId: ${project!.threadId}',
+    );
+    final subThreads = threadProvider.getSubThreads(project!.threadId!);
+    print(
+      '🔍 ProjectDetailScreen: Found ${subThreads.length} sub-threads: ${subThreads.map((t) => t.name).toList()}',
+    );
+
+    // PERBAIKAN: Gunakan logika yang sama dengan ThreadAreaWidget
+    late dynamic targetSubThread;
+
+    if (subThreads.isNotEmpty) {
+      // Cari #general dulu
+      final generalSubThread =
+          subThreads
+              .where((t) => t.name.toLowerCase() == '#general')
+              .firstOrNull;
+
+      if (generalSubThread != null) {
+        targetSubThread = generalSubThread;
+        print(
+          '🔍 ProjectDetailScreen: Found #general sub-thread: ${targetSubThread.id}',
+        );
+      } else {
+        // Kalau #general gak ada, ambil sub-thread pertama
+        targetSubThread = subThreads.first;
+        print(
+          '🔍 ProjectDetailScreen: #general not found, using first sub-thread: ${targetSubThread.name} (${targetSubThread.id})',
+        );
+      }
+    } else {
+      // Kalau gak ada sub-threads sama sekali, fallback ke main thread
+      print(
+        '⚠️ ProjectDetailScreen: No sub-threads found, falling back to main thread',
+      );
+      targetSubThread = threadProvider.threads.firstWhere(
+        (thread) => thread.id == project!.threadId!,
+      );
+    }
+
+    print(
+      '🔍 ProjectDetailScreen: Selected thread to open: ${targetSubThread.name} (ID: ${targetSubThread.id})',
+    );
+
+    // Select thread - PERBAIKAN: pastikan select thread yang benar
+    threadProvider.selectThread(targetSubThread.id);
+
+    // PERBAIKAN: Gunakan navigasi yang konsisten dengan ThreadAreaWidget
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    print('🔍 ProjectDetailScreen: Current route: $currentRoute');
+
+    if (currentRoute == '/thread') {
+      print(
+        '🔧 ProjectDetailScreen: Already on ThreadScreen, popping until ThreadScreen',
+      );
+      Navigator.popUntil(context, (route) => route.settings.name == '/thread');
+    } else {
+      print(
+        '🔧 ProjectDetailScreen: Pushing to ThreadScreen with arguments: ${targetSubThread.id}',
+      );
+      Navigator.pushNamed(context, '/thread', arguments: targetSubThread.id);
     }
   }
 
@@ -871,34 +889,45 @@ void initState() {
 
   void _showChangeRoleDialog(ProjectMember member) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Change role for ${member.user.name} - Coming Soon')),
+      SnackBar(
+        content: Text('Change role for ${member.user.name} - Coming Soon'),
+      ),
     );
   }
 
   void _removeMember(ProjectMember member) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Member'),
-        content: Text('Are you sure you want to remove ${member.user.name} from this project?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Remove Member'),
+            content: Text(
+              'Are you sure you want to remove ${member.user.name} from this project?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  final projectProvider = Provider.of<ProjectProvider>(
+                    context,
+                    listen: false,
+                  );
+                  projectProvider.removeMemberFromProject(
+                    project!.id,
+                    member.userId,
+                  );
+                  setState(() {
+                    project = projectProvider.getProjectById(widget.projectId);
+                  });
+                },
+                child: const Text('Remove'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final projectProvider = Provider.of<ProjectProvider>(context, listen: false);
-              projectProvider.removeMemberFromProject(project!.id, member.userId);
-              setState(() {
-                project = projectProvider.getProjectById(widget.projectId);
-              });
-            },
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
     );
   }
 

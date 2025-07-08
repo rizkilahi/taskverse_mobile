@@ -9,13 +9,13 @@ import '../providers/project_task_provider.dart';
 import '../providers/project_provider.dart';
 import '../widgets/assignee_selector_widget.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
-import '../../../data/models/user_model.dart';
 
 class CreateTaskInProjectScreen extends StatefulWidget {
-  const CreateTaskInProjectScreen({Key? key}) : super(key: key);
+  const CreateTaskInProjectScreen({super.key});
 
   @override
-  _CreateTaskInProjectScreenState createState() => _CreateTaskInProjectScreenState();
+  _CreateTaskInProjectScreenState createState() =>
+      _CreateTaskInProjectScreenState();
 }
 
 class _CreateTaskInProjectScreenState extends State<CreateTaskInProjectScreen> {
@@ -48,41 +48,44 @@ class _CreateTaskInProjectScreenState extends State<CreateTaskInProjectScreen> {
 
   Future<void> _submitForm(String projectId) async {
     if (_formKey.currentState!.validate() && _dueDate != null) {
+      final provider = Provider.of<ProjectTaskProvider>(context, listen: false);
       final task = ProjectTaskModel(
-        id: 'task-${DateTime.now().millisecondsSinceEpoch}',
+        id: '', // Let backend generate ID
         title: _titleController.text,
-        description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+        description:
+            _descriptionController.text.isNotEmpty
+                ? _descriptionController.text
+                : null,
         dueDate: _dueDate!,
         assigneeIds: _assigneeIds,
         projectId: projectId,
         assignerId: UserModel.currentUser.id,
       );
-
-      final provider = Provider.of<ProjectTaskProvider>(context, listen: false);
-      await provider.addProjectTask(task);
-
-      if (provider.loadingState == ProjectTaskLoadingState.success) {
-        await provider.fetchTasksByProjectId(projectId); // Tambah refresh task
+      final success = await provider.addProjectTask(task);
+      if (success == true) {
+        await provider.fetchTasksByProjectId(projectId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Task created successfully')),
         );
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(provider.errorMessage ?? 'Failed to create task')),
+          SnackBar(
+            content: Text(provider.errorMessage ?? 'Failed to create task'),
+          ),
         );
       }
     } else if (_dueDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a due date')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a due date')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final projectId = ModalRoute.of(context)!.settings.arguments as String?;
-    
+
     // Validasi projectId
     if (projectId == null || projectId.isEmpty) {
       return Scaffold(
@@ -124,7 +127,8 @@ class _CreateTaskInProjectScreenState extends State<CreateTaskInProjectScreen> {
                   labelText: 'Title',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => value!.isEmpty ? 'Title is required' : null,
+                validator:
+                    (value) => value!.isEmpty ? 'Title is required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(

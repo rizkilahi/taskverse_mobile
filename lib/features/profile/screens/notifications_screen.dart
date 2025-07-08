@@ -6,7 +6,7 @@ import '../../../shared/widgets/custom_app_bar.dart';
 import '../../thread/providers/thread_provider.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+  const NotificationsScreen({super.key});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();

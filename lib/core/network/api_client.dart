@@ -1,9 +1,8 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../config/constants/api_constants.dart';
 
 class ApiClient {
-  final String baseUrl = 'http://localhost/taskverse_api'; // Change as needed
-
   Future<dynamic> get(String endpoint) async {
     final response = await http.get(Uri.parse('$baseUrl$endpoint'));
     return jsonDecode(response.body);

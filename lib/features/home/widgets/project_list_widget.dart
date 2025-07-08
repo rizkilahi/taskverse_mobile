@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/animation.dart' show CurvedAnimation, AnimationController;
-import 'package:flutter/scheduler.dart' show TickerProvider;
 import '../../../config/themes/app_colors.dart';
 import '../../../config/themes/app_text_styles.dart';
 import '../../../data/models/user_model.dart';

@@ -17,7 +17,9 @@ class ProjectTaskProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   List<ProjectTaskModel> get assignedTasks =>
-      _tasks.where((task) => task.assigneeIds.contains(UserModel.currentUser.id)).toList();
+      _tasks
+          .where((task) => task.assigneeIds.contains(UserModel.currentUser.id))
+          .toList();
 
   // Getter untuk task berdasarkan projectId
   List<ProjectTaskModel> getTasksByProjectId(String projectId) {
@@ -35,12 +37,12 @@ class ProjectTaskProvider with ChangeNotifier {
       print('⚠️ ProjectTaskProvider: ProjectProvider not set');
       return null;
     }
-    
+
     if (projectId == null || projectId.trim().isEmpty) {
       print('⚠️ ProjectTaskProvider: Empty/null project ID provided');
       return null;
     }
-    
+
     return _projectProvider!.getProjectById(projectId);
   }
 
@@ -60,7 +62,10 @@ class ProjectTaskProvider with ChangeNotifier {
     try {
       await Future.delayed(const Duration(milliseconds: 500));
       // Hanya ambil task untuk projectId tertentu
-      _tasks = ProjectTaskModel.dummyTasks.where((task) => task.projectId == projectId).toList();
+      _tasks =
+          ProjectTaskModel.dummyTasks
+              .where((task) => task.projectId == projectId)
+              .toList();
       _loadingState = ProjectTaskLoadingState.success;
       _errorMessage = null; // Clear error
     } catch (e) {
@@ -70,46 +75,38 @@ class ProjectTaskProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addProjectTask(ProjectTaskModel task) async {
+  Future<bool> addProjectTask(ProjectTaskModel task) async {
     _loadingState = ProjectTaskLoadingState.loading;
     notifyListeners();
-
     try {
-      // GUNAKAN: Safe getter
-      final project = _safeGetProjectById(task.projectId);
-      if (project != null && task.assigneeIds.isNotEmpty) {
-        final validAssignees = project.members.map((m) => m.userId).toSet();
-        final invalidAssignees = task.assigneeIds.where((id) => !validAssignees.contains(id)).toList();
-        if (invalidAssignees.isNotEmpty) {
-          throw Exception('Invalid assignees: $invalidAssignees');
-        }
-      }
-
-      final newTask = task.copyWith(assignerId: UserModel.currentUser.id);
-
+      // TODO: Replace with backend call
+      // final success = await _api.createProjectTask(task);
+      // if (success) {
+      //   await fetchTasksByProjectId(task.projectId!);
+      //   _loadingState = ProjectTaskLoadingState.success;
+      //   _errorMessage = null;
+      //   notifyListeners();
+      //   return true;
+      // }
+      // _errorMessage = 'Failed to create task';
+      // _loadingState = ProjectTaskLoadingState.error;
+      // notifyListeners();
+      // return false;
+      // TEMP: Simulate success
       await Future.delayed(const Duration(milliseconds: 500));
-      _tasks = [..._tasks, newTask];
-
-      // Update: Tambah task ke dummyTasks biar persist
-      ProjectTaskModel.dummyTasks = [...ProjectTaskModel.dummyTasks, newTask];
-
-      // GUNAKAN: Safe getter
-      if (_projectProvider != null && project != null) {
-        await _projectProvider!.updateProject(
-          newTask.projectId,
-          taskCount: project.taskCount + 1,
-        );
-      }
-
       _loadingState = ProjectTaskLoadingState.success;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
     } catch (e) {
       _errorMessage = e.toString();
       _loadingState = ProjectTaskLoadingState.error;
+      notifyListeners();
+      return false;
     }
-    notifyListeners();
   }
 
-  Future<void> updateProjectTask(
+  Future<bool> updateProjectTask(
     String taskId, {
     String? title,
     String? description,
@@ -119,52 +116,32 @@ class ProjectTaskProvider with ChangeNotifier {
   }) async {
     _loadingState = ProjectTaskLoadingState.loading;
     notifyListeners();
-
     try {
+      // TODO: Replace with backend call
+      // final success = await _api.updateProjectTask(...);
+      // if (success) {
+      //   await fetchTasksByProjectId(...);
+      //   _loadingState = ProjectTaskLoadingState.success;
+      //   _errorMessage = null;
+      //   notifyListeners();
+      //   return true;
+      // }
+      // _errorMessage = 'Failed to update task';
+      // _loadingState = ProjectTaskLoadingState.error;
+      // notifyListeners();
+      // return false;
+      // TEMP: Simulate success
       await Future.delayed(const Duration(milliseconds: 500));
-      ProjectTaskModel? taskToUpdate = _tasks.firstWhere((task) => task.id == taskId);
-      bool wasCompleted = taskToUpdate.isCompleted;
-
-      _tasks = _tasks.map((task) {
-        if (task.id == taskId) {
-          return task.copyWith(
-            title: title,
-            description: description,
-            dueDate: dueDate,
-            assigneeIds: assigneeIds,
-            isCompleted: isCompleted,
-          );
-        }
-        return task;
-      }).toList();
-
-      // Update: Sinkronkan dummyTasks
-      ProjectTaskModel.dummyTasks = _tasks;
-
-      if (isCompleted != null && _projectProvider != null) {
-        // GUNAKAN: Safe getter
-        final project = _safeGetProjectById(taskToUpdate.projectId);
-        if (project != null) {
-          if (isCompleted && !wasCompleted) {
-            await _projectProvider!.updateProject(
-              taskToUpdate.projectId,
-              taskCount: project.taskCount - 1,
-            );
-          } else if (!isCompleted && wasCompleted) {
-            await _projectProvider!.updateProject(
-              taskToUpdate.projectId,
-              taskCount: project.taskCount + 1,
-            );
-          }
-        }
-      }
-
       _loadingState = ProjectTaskLoadingState.success;
+      _errorMessage = null;
+      notifyListeners();
+      return true;
     } catch (e) {
       _errorMessage = e.toString();
       _loadingState = ProjectTaskLoadingState.error;
+      notifyListeners();
+      return false;
     }
-    notifyListeners();
   }
 
   Future<void> deleteProjectTask(String taskId) async {

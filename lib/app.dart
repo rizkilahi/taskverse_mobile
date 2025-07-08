@@ -7,8 +7,6 @@ import 'features/home/screens/home_screen.dart';
 import 'features/taskroom/screens/taskroom_screen.dart';
 import 'features/thread/screens/thread_screen.dart';
 import 'features/profile/screens/profile_screen.dart';
-import 'providers/navigation_provider.dart';
-import 'features/home/providers/home_provider.dart';
 import 'features/taskroom/providers/task_provider.dart';
 import 'features/taskroom/providers/project_provider.dart'; // NEW
 import 'features/thread/providers/thread_provider.dart';
